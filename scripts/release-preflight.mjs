@@ -2,6 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
 import { execSync } from "node:child_process";
+import { createServer } from "node:net";
 
 const isWindows = process.platform === "win32";
 const npmCmd = isWindows ? "npm.cmd" : "npm";
@@ -10,6 +11,11 @@ const flags = new Set(process.argv.slice(2));
 const skipE2E = flags.has("--skip-e2e");
 
 const checks = [
+  {
+    name: "NAS mount pre-check",
+    command: npmCmd,
+    args: ["run", "ops:nas-check"],
+  },
   { name: "Backend build", command: npmCmd, args: ["run", "build"] },
   {
     name: "Frontend lint",
@@ -25,17 +31,22 @@ const checks = [
     name: "API smoke (local)",
     command: npmCmd,
     args: ["run", "test:smoke:api:local"],
+    envFactory: ({ ports }) => ({
+      PORT: String(ports.smokeApi),
+      API_BASE_URL: `http://127.0.0.1:${ports.smokeApi}`,
+      SMOKE_FORCE_START: "1",
+    }),
   },
   {
     name: "Frontend E2E",
     command: npmCmd,
     args: ["run", "test:e2e:frontend"],
-    env: {
-      PORT: "4100",
-      FRONTEND_PORT: "3110",
-      NEXT_PUBLIC_API_BASE_URL: "http://127.0.0.1:4100",
-      PLAYWRIGHT_BASE_URL: "http://127.0.0.1:3110",
-    },
+    envFactory: ({ ports }) => ({
+      PORT: String(ports.e2eApi),
+      FRONTEND_PORT: String(ports.e2eWeb),
+      NEXT_PUBLIC_API_BASE_URL: `http://127.0.0.1:${ports.e2eApi}`,
+      PLAYWRIGHT_BASE_URL: `http://127.0.0.1:${ports.e2eWeb}`,
+    }),
     skip: skipE2E,
   },
 ];
@@ -85,6 +96,29 @@ function runCommand(name, command, args, env = {}) {
         code: code ?? -1,
         durationMs,
         command: `${command} ${args.join(" ")}`,
+      });
+    });
+  });
+}
+
+function findAvailablePort(start = 0) {
+  return new Promise((resolve, reject) => {
+    const server = createServer();
+    server.unref();
+    server.on("error", reject);
+    server.listen(start, "127.0.0.1", () => {
+      const address = server.address();
+      if (!address || typeof address === "string") {
+        server.close(() => reject(new Error("Failed to resolve free port")));
+        return;
+      }
+      const { port } = address;
+      server.close((closeErr) => {
+        if (closeErr) {
+          reject(closeErr);
+          return;
+        }
+        resolve(port);
       });
     });
   });
@@ -161,6 +195,11 @@ async function main() {
   const results = [];
   const skipped = [];
   let hasFailure = false;
+  const ports = {
+    smokeApi: await findAvailablePort(0),
+    e2eApi: await findAvailablePort(0),
+    e2eWeb: await findAvailablePort(0),
+  };
 
   for (const check of checks) {
     if (check.skip) {
@@ -168,7 +207,11 @@ async function main() {
       continue;
     }
     console.log(`\n[preflight] running: ${check.name}`);
-    const result = await runCommand(check.name, check.command, check.args, check.env);
+    const env =
+      typeof check.envFactory === "function"
+        ? check.envFactory({ ports })
+        : check.env;
+    const result = await runCommand(check.name, check.command, check.args, env);
     results.push(result);
     if (result.status === "FAILED") {
       hasFailure = true;

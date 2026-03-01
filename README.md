@@ -104,6 +104,12 @@ Submission status:
 - API smoke (auto start backend if needed): `npm run test:smoke:api:local`
 - Frontend E2E (Playwright): `npm run test:e2e:frontend`
 - Release preflight report: `npm run release:preflight` (quick: `npm run release:preflight:quick`)
+- NAS mount pre-check: `npm run ops:nas-check`
+
+## 11) Release ops docs
+- Release checklist: `.github/release-checklist.md`
+- Release notes template: `.github/release-notes-template.md`
+- Deployment rehearsal guide: `.github/deployment-rehearsal.md`
 
 ## Security hardening (applied)
 - Login rate limiting (`LOGIN_RATE_LIMIT_*`)
@@ -114,13 +120,13 @@ Submission status:
 - Upload guardrails (blocked executable extensions, filename length, empty-file reject)
 - Frontend auth cookie minimization (token + role only)
 
-## 11) Frontend app
+## 12) Frontend app
 - Frontend source: `./frontend`
 - Frontend local run:
   - `npm --prefix frontend install`
   - `npm --prefix frontend run dev`
 
-## 12) PR operation standard (recommended)
+## 13) PR operation standard (recommended)
 - Open PRs against `main` (or `master`).
 - Require CI check `test` to pass before merge.
 - Prefer squash merge and delete branch after merge.
@@ -135,10 +141,10 @@ PR template:
 Release checklist:
 - `.github/release-checklist.md`
 
-## 13) CI badge setup
+## 14) CI badge setup
 The badge is configured for `guddk1019/test`.
 
-## 14) Apply branch protection (API)
+## 15) Apply branch protection (API)
 If you want to apply branch protection without manual UI clicks:
 
 ```bash

@@ -18,6 +18,7 @@ Use this checklist before every production release.
 ## 3) DB and storage safety
 - [ ] DB backup created (timestamp recorded).
 - [ ] NAS backup snapshot created (timestamp recorded).
+- [ ] NAS mount pre-check: `npm run ops:nas-check`
 - [ ] Migration scripts reviewed.
 - [ ] `npm run db:migrate` dry-run/validation completed in staging.
 
@@ -52,3 +53,7 @@ Use this checklist before every production release.
 - Release version/tag:
 - Release owner:
 - Validation evidence links:
+
+References:
+- `.github/release-notes-template.md`
+- `.github/deployment-rehearsal.md`
