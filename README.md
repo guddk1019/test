@@ -104,6 +104,8 @@ Submission status:
 - API smoke (auto start backend if needed): `npm run test:smoke:api:local`
 - Frontend E2E (Playwright): `npm run test:e2e:frontend`
 - Release preflight report: `npm run release:preflight` (quick: `npm run release:preflight:quick`)
+- Environment validation: `npm run ops:validate-env` (strict: `npm run ops:validate-env:strict`)
+  - Preflight auto-allocates isolated local ports for smoke/E2E checks.
 
 ## Security hardening (applied)
 - Login rate limiting (`LOGIN_RATE_LIMIT_*`)

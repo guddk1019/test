@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 
 const API_BASE_URL = process.env.API_BASE_URL ?? "http://localhost:4000";
 const HEALTH_URL = `${API_BASE_URL}/health`;
+const FORCE_START_SERVER = process.env.SMOKE_FORCE_START === "1";
 
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -44,7 +45,7 @@ async function main() {
   let backendProcess = null;
   let startedBackend = false;
 
-  if (!(await isHealthy())) {
+  if (FORCE_START_SERVER || !(await isHealthy())) {
     startedBackend = true;
     const env = {
       ...process.env,
