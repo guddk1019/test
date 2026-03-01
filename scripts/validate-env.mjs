@@ -1,8 +1,46 @@
+import { existsSync } from "node:fs";
 import dotenv from "dotenv";
 
-dotenv.config();
+function parseArgs(argv) {
+  const args = argv.slice(2);
+  let strictMode = false;
+  let envFile = ".env";
 
-const strictMode = process.argv.includes("--strict");
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === "--strict") {
+      strictMode = true;
+      continue;
+    }
+    if (arg === "--env-file") {
+      const value = args[index + 1];
+      if (!value) {
+        throw new Error("--env-file requires a path value.");
+      }
+      envFile = value;
+      index += 1;
+      continue;
+    }
+    if (arg.startsWith("--env-file=")) {
+      const value = arg.split("=", 2)[1];
+      if (!value) {
+        throw new Error("--env-file requires a path value.");
+      }
+      envFile = value;
+      continue;
+    }
+  }
+
+  return { strictMode, envFile };
+}
+
+const { strictMode, envFile } = parseArgs(process.argv);
+if (!existsSync(envFile)) {
+  console.error(`[env-check] env file not found: ${envFile}`);
+  process.exit(1);
+}
+
+dotenv.config({ path: envFile });
 
 const requiredVars = [
   "DATABASE_URL",
@@ -76,6 +114,9 @@ for (const name of requiredVars) {
 const databaseUrl = get("DATABASE_URL");
 if (databaseUrl && !/^postgres(ql)?:\/\//i.test(databaseUrl)) {
   fail("DATABASE_URL must start with postgres:// or postgresql://");
+}
+if (strictMode && /localhost|127\.0\.0\.1/i.test(databaseUrl)) {
+  fail("Strict mode: DATABASE_URL should not point to localhost/127.0.0.1.");
 }
 
 const jwtSecret = get("JWT_SECRET");
@@ -175,7 +216,8 @@ if (nasMountPath) {
   }
 }
 
-console.log(`\n[env-check] mode: ${strictMode ? "strict" : "default"}\n`);
+console.log(`\n[env-check] env-file: ${envFile}`);
+console.log(`[env-check] mode: ${strictMode ? "strict" : "default"}\n`);
 for (const check of checks) {
   const mark = check.ok ? "OK" : "FAIL";
   console.log(`[${mark}] ${check.message}`);
