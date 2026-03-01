@@ -51,8 +51,33 @@ const upload = multer({
   },
 });
 
+const MAX_UPLOAD_FILES = 30;
+const MAX_NOTE_TEXT_LENGTH = 2_000;
+
+function readExtension(fileName: string): string {
+  const ext = path.extname(fileName).toLowerCase();
+  return ext.startsWith(".") ? ext.slice(1) : ext;
+}
+
+function validateUploadedFile(file: Express.Multer.File): void {
+  if (!file.originalname || file.originalname.trim().length === 0) {
+    throw new HttpError(400, "File name is required.");
+  }
+  if (file.originalname.length > config.uploadMaxFilenameLength) {
+    throw new HttpError(400, "File name is too long.");
+  }
+  if (!file.buffer || file.buffer.byteLength === 0) {
+    throw new HttpError(400, "Empty files are not allowed.");
+  }
+
+  const extension = readExtension(file.originalname);
+  if (extension && config.uploadBlockedExtensions.has(extension)) {
+    throw new HttpError(400, `File extension ".${extension}" is not allowed.`);
+  }
+}
+
 function uploadFilesMiddleware(req: any, res: any, next: any) {
-  upload.array("files", 30)(req, res, (error: any) => {
+  upload.array("files", MAX_UPLOAD_FILES)(req, res, (error: any) => {
     if (error) {
       next(new HttpError(400, error.message));
       return;
@@ -163,6 +188,9 @@ submissionsRouter.post(
     const files = (req.files as Express.Multer.File[]) ?? [];
     if (files.length === 0) {
       throw new HttpError(400, "At least one file is required.");
+    }
+    for (const file of files) {
+      validateUploadedFile(file);
     }
 
     const ownerResult = await query<SubmissionOwnerRow>(
@@ -319,6 +347,9 @@ submissionsRouter.post(
       typeof noteTextRaw === "string" && noteTextRaw.trim().length > 0
         ? noteTextRaw.trim()
         : null;
+    if (noteText && noteText.length > MAX_NOTE_TEXT_LENGTH) {
+      throw new HttpError(400, "noteText is too long.");
+    }
 
     const client = await pool.connect();
     try {

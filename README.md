@@ -1,4 +1,3 @@
-test
 # Corp Performance MVP Server
 
 [![CI](https://github.com/guddk1019/test/actions/workflows/ci.yml/badge.svg)](https://github.com/guddk1019/test/actions/workflows/ci.yml)
@@ -97,6 +96,14 @@ Submission status:
 - API smoke (auto start backend if needed): `npm run test:smoke:api:local`
 - Frontend E2E (Playwright): `npm run test:e2e:frontend`
 
+## Security hardening (applied)
+- Login rate limiting (`LOGIN_RATE_LIMIT_*`)
+- Strict JWT verification (`HS256`, issuer, audience)
+- Basic security headers (`X-Frame-Options`, `CSP`, `HSTS` on HTTPS, etc.)
+- Stricter input validation (IDs, dates, query length, comment/text length)
+- Upload guardrails (blocked executable extensions, filename length, empty-file reject)
+- Frontend auth cookie minimization (token + role only)
+
 ## 11) Frontend app
 - Frontend source: `./frontend`
 - Frontend local run:
@@ -117,3 +124,13 @@ PR template:
 
 ## 13) CI badge setup
 The badge is configured for `guddk1019/test`.
+
+## 14) Apply branch protection (API)
+If you want to apply branch protection without manual UI clicks:
+
+```bash
+npm run ops:branch-protect
+```
+
+Required environment variable:
+- `GITHUB_TOKEN` (or `GH_TOKEN`)

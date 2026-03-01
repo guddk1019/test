@@ -2,6 +2,27 @@
 
 Apply these settings to `main` (or your default protected branch).
 
+## One-command apply (optional)
+Use the automation script from project root:
+
+```bash
+npm run ops:branch-protect
+```
+
+Required environment variable:
+- `GITHUB_TOKEN` (or `GH_TOKEN`): token with admin permission for the repository.
+
+Optional:
+- `GH_REPO` (default: `guddk1019/test`)
+- `GH_BRANCH` (default: `main`)
+- `GH_REQUIRED_CHECK` (default: `test`)
+
+Preview without applying:
+
+```bash
+npm run ops:branch-protect -- --dry-run
+```
+
 ## Required settings
 1. `Require a pull request before merging`: Enabled
 2. `Require approvals`: 1 or more
