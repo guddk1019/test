@@ -33,7 +33,7 @@ export default defineConfig({
       command: backendStartCommand,
       url: `${apiBaseUrl.replace(/\/$/, "")}/health`,
       timeout: 120_000,
-      reuseExistingServer: !isCI,
+      reuseExistingServer: true,
       env: {
         ...process.env,
         PORT: process.env.PORT ?? "4000",
