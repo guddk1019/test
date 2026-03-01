@@ -1,1 +1,124 @@
 test
+# Corp Performance MVP Server
+
+<!-- Replace OWNER/REPO after GitHub remote is connected -->
+![CI](https://github.com/OWNER/REPO/actions/workflows/ci.yml/badge.svg)
+
+MVP backend for:
+- Employee app (Windows desktop, Electron) -> API upload -> NAS storage
+- Admin (Mac) -> browser-based admin API/web
+
+## 1) Stack
+- Node.js + Express + TypeScript
+- PostgreSQL
+- NAS mount path accessed by server only
+
+## 2) Key rules implemented
+- Employees never access NAS directly.
+- File flow is only `App -> Server -> NAS`.
+- Submission version auto-increments (`v001`, `v002`, ...).
+- Server writes file metadata (hash, size, NAS path) to DB.
+- Audit logs are written for key actions.
+
+## 3) NAS layout
+Stored under:
+
+`/corp_perf/{year}/{dept}/{employeeId}/{workItemId}/submissions/v001/`
+
+On finalize, `manifest.json` is written in the same folder.
+
+## 4) Environment
+Copy `.env.example` to `.env` and adjust values.
+
+Required:
+- `DATABASE_URL`
+- `JWT_SECRET`
+- `NAS_MOUNT_PATH`
+
+## 5) Run
+```bash
+npm install
+docker compose up -d
+npm run db:migrate
+npm run db:seed
+npm run dev
+```
+
+PowerShell execution policy may block `npm`. In that case use `npm.cmd` (for example `npm.cmd run dev`).
+
+Health check:
+`GET http://localhost:4000/health`
+
+## 6) Seed accounts
+Defaults from `.env`:
+- Admin: `admin001 / Admin1234!`
+- Employee: `emp001 / Emp1234!`
+
+## 7) API (MVP)
+
+### Auth
+- `POST /api/auth/login`
+
+### Employee app APIs
+- `GET /api/work-items/me`
+- `POST /api/work-items`
+- `GET /api/work-items/:workItemId`
+- `POST /api/work-items/:workItemId/submissions`
+- `POST /api/submissions/:submissionId/files` (multipart field: `files`)
+- `POST /api/submissions/:submissionId/finalize`
+- `GET /api/submissions/:submissionId/status`
+
+### Admin APIs
+- `GET /api/admin/work-items`
+- `GET /api/admin/work-items/:workItemId`
+- `POST /api/admin/submissions/:submissionId/review`
+
+## 8) Status model
+
+Work item status:
+- `DRAFT`
+- `SUBMITTED`
+- `EVALUATING`
+- `DONE`
+- `REJECTED`
+
+Submission status:
+- `UPLOADING`
+- `SUBMITTED`
+- `EVALUATING`
+- `DONE`
+- `REJECTED`
+
+## 9) Notes for next phase
+- Add `change_requests` table and approval flow.
+- Add async AI evaluation queue and `evaluations` table.
+- Expand dashboard analytics and notification workflow.
+
+## 10) Automated tests
+- API smoke (auto start backend if needed): `npm run test:smoke:api:local`
+- Frontend E2E (Playwright): `npm run test:e2e:frontend`
+
+## 11) Frontend app
+- Frontend source: `./frontend`
+- Frontend local run:
+  - `npm --prefix frontend install`
+  - `npm --prefix frontend run dev`
+
+## 12) PR operation standard (recommended)
+- Open PRs against `main` (or `master`).
+- Require CI check `test` to pass before merge.
+- Prefer squash merge and delete branch after merge.
+- Require at least 1 approval.
+
+Branch protection setup reference:
+- `.github/branch-protection.md`
+
+PR template:
+- `.github/pull_request_template.md`
+
+## 13) CI badge setup
+Current badge URL uses placeholder repository path.
+
+1. Open this file and replace `OWNER/REPO` in the badge URL at the top.
+2. Push changes to GitHub.
+3. Confirm badge changes to passing/failing status after workflow run.

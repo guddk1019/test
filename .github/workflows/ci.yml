@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: corp_perf
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d corp_perf"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      PORT: 4000
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/corp_perf
+      JWT_SECRET: dev_secret_ci
+      JWT_EXPIRES_IN: 12h
+      NAS_MOUNT_PATH: ./nas_mount
+      UPLOAD_MAX_MB: 100
+      CORS_ORIGIN: http://127.0.0.1:3100
+      NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:4000
+      SEED_ADMIN_EMPLOYEE_ID: admin001
+      SEED_ADMIN_PASSWORD: Admin1234!
+      SEED_ADMIN_NAME: System Admin
+      SEED_ADMIN_DEPARTMENT: HQ
+      SEED_EMPLOYEE_EMPLOYEE_ID: emp001
+      SEED_EMPLOYEE_PASSWORD: Emp1234!
+      SEED_EMPLOYEE_NAME: Sample Employee
+      SEED_EMPLOYEE_DEPARTMENT: Engineering
+      CI: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            frontend/package-lock.json
+
+      - name: Install backend dependencies
+        run: npm ci
+
+      - name: Build backend
+        run: npm run build
+
+      - name: Migrate and seed database
+        run: |
+          npm run db:migrate
+          npm run db:seed
+
+      - name: Run backend API smoke test
+        run: npm run test:smoke:api:local
+
+      - name: Install frontend dependencies
+        run: npm --prefix frontend ci
+
+      - name: Build frontend
+        run: npm --prefix frontend run build
+
+      - name: Install Playwright browser
+        run: npm --prefix frontend exec playwright install --with-deps chromium
+
+      - name: Run frontend E2E
+        run: npm --prefix frontend run test:e2e
