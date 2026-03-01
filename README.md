@@ -78,6 +78,7 @@ Defaults from `.env`:
 
 ### Migration note
 - New migration added: `sql/002_change_requests.sql`
+- v0.2 draft migration: `sql/003_v020_foundation.sql`
 - Run: `npm run db:migrate`
 
 ## 8) Status model
