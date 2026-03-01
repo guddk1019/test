@@ -15,6 +15,9 @@ const checks = [
     name: "NAS mount pre-check",
     command: npmCmd,
     args: ["run", "ops:nas-check"],
+    name: "Environment validation",
+    command: npmCmd,
+    args: ["run", "ops:validate-env"],
   },
   { name: "Backend build", command: npmCmd, args: ["run", "build"] },
   {
