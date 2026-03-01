@@ -143,8 +143,12 @@ test.describe("MVP core flow", () => {
         .locator("article")
         .filter({ hasText: /^Submission v/i })
         .first();
+      const applyButton = submissionCard.getByRole("button", { name: "Apply" });
+      await submissionCard.locator("select").first().selectOption("REJECTED");
+      await expect(applyButton).toBeDisabled();
       await submissionCard.locator("select").first().selectOption("DONE");
-      await submissionCard.getByRole("button", { name: "Apply" }).click();
+      await expect(applyButton).toBeEnabled();
+      await applyButton.click();
     } finally {
       await adminContext.close();
     }

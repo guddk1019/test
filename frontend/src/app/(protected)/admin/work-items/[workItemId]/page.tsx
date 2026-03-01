@@ -147,6 +147,8 @@ export default function AdminWorkItemDetailPage() {
           changeRequests.map((changeRequest) => {
             const form = changeForms[changeRequest.id] ?? defaultChangeForm;
             const canReview = changeRequest.status === "REQUESTED";
+            const isChangeRejectWithoutComment =
+              form.status === "REJECTED" && !form.comment.trim();
 
             return (
               <article
@@ -217,7 +219,7 @@ export default function AdminWorkItemDetailPage() {
                       placeholder="Review comment"
                     />
                     <Button
-                      disabled={changeMutation.isPending}
+                      disabled={changeMutation.isPending || isChangeRejectWithoutComment}
                       onClick={() =>
                         changeMutation.mutate({
                           changeRequestId: changeRequest.id,
@@ -234,6 +236,11 @@ export default function AdminWorkItemDetailPage() {
                     </Button>
                   </div>
                 ) : null}
+                {canReview && isChangeRejectWithoutComment ? (
+                  <p className="mt-2 text-xs text-rose-700">
+                    Rejection requires a review comment.
+                  </p>
+                ) : null}
               </article>
             );
           })
@@ -249,6 +256,8 @@ export default function AdminWorkItemDetailPage() {
           submissions.map((submission) => {
             const form = forms[submission.id] ?? defaultForm;
             const files = filesBySubmission.get(submission.id) ?? [];
+            const isRejectWithoutComment =
+              form.status === "REJECTED" && !form.comment.trim();
             return (
               <article
                 key={submission.id}
@@ -344,7 +353,7 @@ export default function AdminWorkItemDetailPage() {
                     placeholder="Review comment"
                   />
                   <Button
-                    disabled={mutation.isPending}
+                    disabled={mutation.isPending || isRejectWithoutComment}
                     onClick={() =>
                       mutation.mutate({
                         submissionId: submission.id,
@@ -360,6 +369,11 @@ export default function AdminWorkItemDetailPage() {
                     {mutation.isPending ? "Saving..." : "Apply"}
                   </Button>
                 </div>
+                {isRejectWithoutComment ? (
+                  <p className="mt-2 text-xs text-rose-700">
+                    Rejection requires a review comment.
+                  </p>
+                ) : null}
               </article>
             );
           })

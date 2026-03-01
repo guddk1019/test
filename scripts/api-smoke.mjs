@@ -49,6 +49,21 @@ async function request(path, options = {}) {
   return payload;
 }
 
+async function expectRequestFailure(path, expectedStatus, options = {}) {
+  try {
+    await request(path, options);
+  } catch (error) {
+    const message = String(error?.message ?? error);
+    if (message.includes(`-> ${expectedStatus}:`)) {
+      return;
+    }
+    throw new Error(
+      `Expected status ${expectedStatus} for ${path}, but got: ${message}`,
+    );
+  }
+  throw new Error(`Expected ${path} to fail with ${expectedStatus}, but it succeeded.`);
+}
+
 async function main() {
   const now = Date.now();
   const title = `API Smoke ${now}`;
@@ -120,6 +135,17 @@ async function main() {
     "Change request list filter did not return REQUESTED item",
   );
   console.log("[smoke] change request list filter (REQUESTED) ok");
+
+  await expectRequestFailure(
+    `/api/admin/change-requests/${changeRequestId}/review`,
+    400,
+    {
+      method: "POST",
+      token: adminToken,
+      json: { status: "REJECTED" },
+    },
+  );
+  console.log("[smoke] change request reject requires comment ok");
 
   await request(`/api/admin/change-requests/${changeRequestId}/review`, {
     method: "POST",
@@ -202,6 +228,13 @@ async function main() {
     token: adminToken,
   });
   console.log("[smoke] admin work item lookup ok");
+
+  await expectRequestFailure(`/api/admin/submissions/${submissionId}/review`, 400, {
+    method: "POST",
+    token: adminToken,
+    json: { status: "REJECTED" },
+  });
+  console.log("[smoke] submission reject requires comment ok");
 
   await request(`/api/admin/submissions/${submissionId}/review`, {
     method: "POST",

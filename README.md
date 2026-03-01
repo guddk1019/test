@@ -109,6 +109,7 @@ Submission status:
 - Strict JWT verification (`HS256`, issuer, audience)
 - Basic security headers (`X-Frame-Options`, `CSP`, `HSTS` on HTTPS, etc.)
 - Stricter input validation (IDs, dates, query length, comment/text length)
+- Rejection comment is mandatory for admin reject actions
 - Upload guardrails (blocked executable extensions, filename length, empty-file reject)
 - Frontend auth cookie minimization (token + role only)
 
