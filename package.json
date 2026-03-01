@@ -12,6 +12,10 @@
     "test:smoke:api": "node scripts/api-smoke.mjs",
     "test:smoke:api:local": "node scripts/run-api-smoke-with-server.mjs",
     "test:e2e:frontend": "npm --prefix frontend run test:e2e",
+    "ops:validate-env": "node scripts/validate-env.mjs",
+    "ops:validate-env:strict": "node scripts/validate-env.mjs --strict",
+    "ops:validate-env:prod": "node scripts/validate-env.mjs --strict --env-file .env.production",
+    "ops:validate-env:prod:example": "node scripts/validate-env.mjs --strict --env-file .env.production.example",
     "release:preflight": "node scripts/release-preflight.mjs",
     "release:preflight:quick": "node scripts/release-preflight.mjs --skip-e2e",
     "ops:branch-protect": "node scripts/apply-branch-protection.mjs"

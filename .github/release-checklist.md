@@ -22,6 +22,8 @@ Use this checklist before every production release.
 - [ ] `npm run db:migrate` dry-run/validation completed in staging.
 
 ## 4) Environment validation
+- [ ] Validate env defaults: `npm run ops:validate-env`
+- [ ] Validate production env policy: `npm run ops:validate-env:strict -- --env-file .env.production` (or `npm run ops:validate-env:prod`)
 - [ ] Production `.env` checked (JWT, CORS, NAS mount, DB URL).
 - [ ] `CORS_ORIGIN` is production domain only.
 - [ ] `JWT_SECRET` is rotated/managed securely.
