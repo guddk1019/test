@@ -12,6 +12,9 @@ const skipE2E = flags.has("--skip-e2e");
 
 const checks = [
   {
+    name: "NAS mount pre-check",
+    command: npmCmd,
+    args: ["run", "ops:nas-check"],
     name: "Environment validation",
     command: npmCmd,
     args: ["run", "ops:validate-env"],

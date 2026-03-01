@@ -12,6 +12,7 @@
     "test:smoke:api": "node scripts/api-smoke.mjs",
     "test:smoke:api:local": "node scripts/run-api-smoke-with-server.mjs",
     "test:e2e:frontend": "npm --prefix frontend run test:e2e",
+    "ops:nas-check": "node scripts/nas-check.mjs",
     "ops:validate-env": "node scripts/validate-env.mjs",
     "ops:validate-env:strict": "node scripts/validate-env.mjs --strict",
     "ops:validate-env:prod": "node scripts/validate-env.mjs --strict --env-file .env.production",
