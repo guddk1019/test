@@ -5,6 +5,7 @@ import morgan from "morgan";
 import { config } from "./config";
 import { pool } from "./db";
 import { errorHandler, notFound } from "./middleware/error";
+import { applySecurityHeaders } from "./middleware/security";
 import { adminRouter } from "./routes/admin";
 import { authRouter } from "./routes/auth";
 import { submissionsRouter } from "./routes/submissions";
@@ -12,14 +13,31 @@ import { workItemsRouter } from "./routes/workItems";
 
 async function start(): Promise<void> {
   const app = express();
+  app.disable("x-powered-by");
+
+  app.use(applySecurityHeaders);
 
   app.use(
     cors({
-      origin: config.corsOrigin === "*" ? true : config.corsOrigin,
-      credentials: true,
+      origin: (origin, callback) => {
+        if (!origin) {
+          callback(null, true);
+          return;
+        }
+        if (!config.corsAllowedOrigins) {
+          callback(null, true);
+          return;
+        }
+        callback(null, config.corsAllowedOrigins.includes(origin));
+      },
+      credentials: false,
+      methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+      allowedHeaders: ["Authorization", "Content-Type"],
+      maxAge: 86400,
     }),
   );
   app.use(express.json({ limit: "10mb" }));
+  app.use(express.urlencoded({ extended: false, limit: "10mb" }));
   app.use(morgan("dev"));
 
   app.get("/health", async (_req, res, next) => {

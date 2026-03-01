@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { config } from "../config";
+import { query } from "../db";
 import { AuthUser, JwtPayload, UserRole } from "../types/auth";
 
 function readToken(req: Request): string | null {
@@ -24,11 +25,18 @@ export function issueToken(user: AuthUser): string {
     role: user.role,
   };
   return jwt.sign(payload, config.jwtSecret, {
+    algorithm: "HS256",
+    issuer: config.jwtIssuer,
+    audience: config.jwtAudience,
     expiresIn: config.jwtExpiresIn as jwt.SignOptions["expiresIn"],
   });
 }
 
-export function requireAuth(req: Request, res: Response, next: NextFunction): void {
+export async function requireAuth(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
   const token = readToken(req);
   if (!token) {
     res.status(401).json({ message: "Authorization token is required." });
@@ -36,13 +44,44 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
   }
 
   try {
-    const payload = jwt.verify(token, config.jwtSecret) as JwtPayload;
+    const payload = jwt.verify(token, config.jwtSecret, {
+      algorithms: ["HS256"],
+      issuer: config.jwtIssuer,
+      audience: config.jwtAudience,
+    }) as JwtPayload;
+    const userId = Number(payload.sub);
+    if (!Number.isInteger(userId) || userId <= 0) {
+      res.status(401).json({ message: "Invalid token." });
+      return;
+    }
+
+    const result = await query<{
+      id: number;
+      employee_id: string;
+      full_name: string;
+      department: string;
+      role: UserRole;
+      is_active: boolean;
+    }>(
+      `
+        SELECT id, employee_id, full_name, department, role, is_active
+        FROM users
+        WHERE id = $1
+      `,
+      [userId],
+    );
+    const dbUser = result.rows[0];
+    if (!dbUser || !dbUser.is_active) {
+      res.status(401).json({ message: "Invalid token." });
+      return;
+    }
+
     req.user = {
-      id: Number(payload.sub),
-      employeeId: payload.employeeId,
-      fullName: payload.fullName,
-      department: payload.department,
-      role: payload.role,
+      id: dbUser.id,
+      employeeId: dbUser.employee_id,
+      fullName: dbUser.full_name,
+      department: dbUser.department,
+      role: dbUser.role,
     };
     next();
   } catch {

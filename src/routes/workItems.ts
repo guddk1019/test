@@ -46,12 +46,29 @@ interface ArtifactRow {
 export const workItemsRouter = Router();
 workItemsRouter.use(requireAuth);
 
+const WORK_ITEM_STATUSES = new Set([
+  "DRAFT",
+  "SUBMITTED",
+  "EVALUATING",
+  "DONE",
+  "REJECTED",
+]);
+const MAX_QUERY_LENGTH = 100;
+const MAX_TITLE_LENGTH = 200;
+const MAX_PLAN_TEXT_LENGTH = 10_000;
+
 workItemsRouter.get(
   "/me",
   asyncHandler(async (req, res) => {
     const user = req.user!;
     const status = String(req.query.status ?? "").trim().toUpperCase();
     const keyword = String(req.query.q ?? "").trim();
+    if (status && !WORK_ITEM_STATUSES.has(status)) {
+      throw new HttpError(400, "Invalid status filter.");
+    }
+    if (keyword.length > MAX_QUERY_LENGTH) {
+      throw new HttpError(400, "Search keyword is too long.");
+    }
 
     const values: unknown[] = [user.id];
     const clauses: string[] = ["w.owner_user_id = $1"];
@@ -95,6 +112,12 @@ workItemsRouter.post(
 
     if (!title || !planText || !dueDate) {
       throw new HttpError(400, "title, planText, dueDate are required.");
+    }
+    if (title.length > MAX_TITLE_LENGTH) {
+      throw new HttpError(400, "title is too long.");
+    }
+    if (planText.length > MAX_PLAN_TEXT_LENGTH) {
+      throw new HttpError(400, "planText is too long.");
     }
     if (!isIsoDate(dueDate)) {
       throw new HttpError(400, "dueDate must be YYYY-MM-DD.");

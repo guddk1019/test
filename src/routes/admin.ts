@@ -22,6 +22,19 @@ interface WorkItemListRow {
 export const adminRouter = Router();
 adminRouter.use(requireAuth, requireRole("ADMIN"));
 
+const WORK_ITEM_STATUSES = new Set([
+  "DRAFT",
+  "SUBMITTED",
+  "EVALUATING",
+  "DONE",
+  "REJECTED",
+]);
+const REVIEW_STATUSES = new Set(["REJECTED", "EVALUATING", "DONE"]);
+const MAX_QUERY_LENGTH = 100;
+const MAX_DEPARTMENT_LENGTH = 100;
+const MAX_EMPLOYEE_ID_LENGTH = 64;
+const MAX_REVIEW_COMMENT_LENGTH = 2_000;
+
 adminRouter.get(
   "/work-items",
   asyncHandler(async (req, res) => {
@@ -29,6 +42,18 @@ adminRouter.get(
     const department = String(req.query.department ?? "").trim();
     const ownerEmployeeId = String(req.query.ownerEmployeeId ?? "").trim();
     const keyword = String(req.query.q ?? "").trim();
+    if (status && !WORK_ITEM_STATUSES.has(status)) {
+      throw new HttpError(400, "Invalid status filter.");
+    }
+    if (department.length > MAX_DEPARTMENT_LENGTH) {
+      throw new HttpError(400, "department is too long.");
+    }
+    if (ownerEmployeeId.length > MAX_EMPLOYEE_ID_LENGTH) {
+      throw new HttpError(400, "ownerEmployeeId is too long.");
+    }
+    if (keyword.length > MAX_QUERY_LENGTH) {
+      throw new HttpError(400, "Search keyword is too long.");
+    }
 
     const values: unknown[] = [];
     const clauses: string[] = [];
@@ -207,8 +232,11 @@ adminRouter.post(
       typeof commentRaw === "string" && commentRaw.trim().length > 0
         ? commentRaw.trim()
         : null;
+    if (comment && comment.length > MAX_REVIEW_COMMENT_LENGTH) {
+      throw new HttpError(400, "comment is too long.");
+    }
 
-    if (!["REJECTED", "EVALUATING", "DONE"].includes(status)) {
+    if (!REVIEW_STATUSES.has(status)) {
       throw new HttpError(400, "status must be one of REJECTED, EVALUATING, DONE.");
     }
 
