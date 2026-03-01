@@ -7,36 +7,32 @@ on:
     branches: [ main ]
 
 jobs:
-  backend:
+  server:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: backend
-
+        working-directory: .
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-
-      - run: npm install
-
-      - run: npm run build || echo "no build"
+      - name: Install (server)
+        run: npm ci || npm install
+      - name: Build (server)
+        run: npm run build
 
   frontend:
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: frontend
-
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-
-      - run: npm install
-
-      - run: npm run build || echo "no build"
+      - name: Install (frontend)
+        run: npm ci || npm install
+      - name: Build (frontend)
+        run: npm run build
