@@ -27,6 +27,7 @@ On finalize, `manifest.json` is written in the same folder.
 
 ## 4) Environment
 Copy `.env.example` to `.env` and adjust values.
+For production, copy `.env.production.example` to `.env.production` and fill real values.
 
 Required:
 - `DATABASE_URL`
@@ -110,6 +111,10 @@ Submission status:
 - Release checklist: `.github/release-checklist.md`
 - Release notes template: `.github/release-notes-template.md`
 - Deployment rehearsal guide: `.github/deployment-rehearsal.md`
+- Environment validation: `npm run ops:validate-env` (strict: `npm run ops:validate-env:strict`)
+  - Production file: `npm run ops:validate-env:prod`
+  - Example production file check: `npm run ops:validate-env:prod:example`
+  - Preflight auto-allocates isolated local ports for smoke/E2E checks.
 
 ## Security hardening (applied)
 - Login rate limiting (`LOGIN_RATE_LIMIT_*`)
