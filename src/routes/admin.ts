@@ -73,6 +73,10 @@ const CHANGE_REVIEW_STATUSES = new Set(["APPROVED", "REJECTED"]);
 const CHANGE_REQUEST_STATUSES = new Set(["REQUESTED", "APPROVED", "REJECTED"]);
 const MAX_DATE_LENGTH = 10;
 
+function normalizeReviewComment(raw: unknown): string | null {
+  return typeof raw === "string" && raw.trim().length > 0 ? raw.trim() : null;
+}
+
 adminRouter.get(
   "/work-items",
   asyncHandler(async (req, res) => {
@@ -419,17 +423,16 @@ adminRouter.post(
     }
 
     const status = String(req.body?.status ?? "").trim().toUpperCase();
-    const commentRaw = req.body?.comment;
-    const comment =
-      typeof commentRaw === "string" && commentRaw.trim().length > 0
-        ? commentRaw.trim()
-        : null;
+    const comment = normalizeReviewComment(req.body?.comment);
     if (comment && comment.length > MAX_REVIEW_COMMENT_LENGTH) {
       throw new HttpError(400, "comment is too long.");
     }
 
     if (!REVIEW_STATUSES.has(status)) {
       throw new HttpError(400, "status must be one of REJECTED, EVALUATING, DONE.");
+    }
+    if (status === "REJECTED" && !comment) {
+      throw new HttpError(400, "comment is required when status is REJECTED.");
     }
 
     const client = await pool.connect();
@@ -524,16 +527,15 @@ adminRouter.post(
     }
 
     const status = String(req.body?.status ?? "").trim().toUpperCase();
-    const commentRaw = req.body?.comment;
-    const comment =
-      typeof commentRaw === "string" && commentRaw.trim().length > 0
-        ? commentRaw.trim()
-        : null;
+    const comment = normalizeReviewComment(req.body?.comment);
     if (comment && comment.length > MAX_REVIEW_COMMENT_LENGTH) {
       throw new HttpError(400, "comment is too long.");
     }
     if (!CHANGE_REVIEW_STATUSES.has(status)) {
       throw new HttpError(400, "status must be one of APPROVED, REJECTED.");
+    }
+    if (status === "REJECTED" && !comment) {
+      throw new HttpError(400, "comment is required when status is REJECTED.");
     }
 
     const client = await pool.connect();
