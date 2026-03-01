@@ -22,6 +22,13 @@ interface WorkItemOwnerRow {
   owner_department: string;
 }
 
+interface ChangeRequestLinkRow {
+  id: number;
+  work_item_id: number;
+  version: number;
+  status: "REQUESTED" | "APPROVED" | "REJECTED";
+}
+
 interface SubmissionOwnerRow {
   submission_id: number;
   work_item_id: number;
@@ -97,6 +104,14 @@ submissionsRouter.post(
     if (!workItemId) {
       throw new HttpError(400, "Invalid workItemId.");
     }
+    const changeRequestIdRaw = req.body?.changeRequestId;
+    const changeRequestId =
+      changeRequestIdRaw === undefined || changeRequestIdRaw === null || changeRequestIdRaw === ""
+        ? null
+        : parseId(String(changeRequestIdRaw));
+    if (changeRequestIdRaw !== undefined && changeRequestId === null) {
+      throw new HttpError(400, "Invalid changeRequestId.");
+    }
 
     const ownerResult = await query<WorkItemOwnerRow>(
       `
@@ -118,6 +133,23 @@ submissionsRouter.post(
     if (user.role !== "ADMIN" && workItem.owner_user_id !== user.id) {
       throw new HttpError(403, "Forbidden.");
     }
+    if (changeRequestId) {
+      const changeRequestResult = await query<ChangeRequestLinkRow>(
+        `
+          SELECT id, work_item_id, version, status
+          FROM change_requests
+          WHERE id = $1
+        `,
+        [changeRequestId],
+      );
+      const changeRequest = changeRequestResult.rows[0];
+      if (!changeRequest || changeRequest.work_item_id !== workItemId) {
+        throw new HttpError(400, "Invalid changeRequestId for this work item.");
+      }
+      if (changeRequest.status !== "APPROVED") {
+        throw new HttpError(400, "Only APPROVED change request can be linked.");
+      }
+    }
 
     const client = await pool.connect();
     try {
@@ -134,15 +166,16 @@ submissionsRouter.post(
         id: number;
         work_item_id: number;
         version: number;
+        change_request_id: number | null;
         status: string;
         created_at: string;
       }>(
         `
-          INSERT INTO submissions (work_item_id, version, status)
-          VALUES ($1, $2, 'UPLOADING')
-          RETURNING id, work_item_id, version, status, created_at
+          INSERT INTO submissions (work_item_id, version, status, change_request_id)
+          VALUES ($1, $2, 'UPLOADING', $3)
+          RETURNING id, work_item_id, version, change_request_id, status, created_at
         `,
-        [workItemId, nextVersion],
+        [workItemId, nextVersion, changeRequestId],
       );
 
       await writeAuditLog(
@@ -151,7 +184,7 @@ submissionsRouter.post(
           action: "submission.create",
           targetType: "submission",
           targetId: inserted.rows[0].id,
-          meta: { workItemId, version: nextVersion },
+          meta: { workItemId, version: nextVersion, changeRequestId },
         },
         client,
       );
@@ -162,6 +195,7 @@ submissionsRouter.post(
           id: inserted.rows[0].id,
           workItemId: inserted.rows[0].work_item_id,
           version: inserted.rows[0].version,
+          changeRequestId: inserted.rows[0].change_request_id,
           status: inserted.rows[0].status,
           createdAt: inserted.rows[0].created_at,
         },
@@ -493,6 +527,7 @@ submissionsRouter.get(
     const result = await query<{
       id: number;
       work_item_id: number;
+      change_request_id: number | null;
       status: string;
       note_text: string | null;
       submitted_at: string | null;
@@ -503,6 +538,7 @@ submissionsRouter.get(
         SELECT
           s.id,
           s.work_item_id,
+          s.change_request_id,
           s.status,
           s.note_text,
           s.submitted_at,
@@ -526,6 +562,7 @@ submissionsRouter.get(
       submission: {
         id: submission.id,
         workItemId: submission.work_item_id,
+        changeRequestId: submission.change_request_id,
         status: submission.status,
         noteText: submission.note_text,
         submittedAt: submission.submitted_at,

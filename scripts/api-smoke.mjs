@@ -88,12 +88,57 @@ async function main() {
   );
   console.log("[smoke] work item list lookup ok");
 
+  const createdChangeRequest = await request(`/api/work-items/${workItemId}/change-requests`, {
+    method: "POST",
+    token: employeeToken,
+    json: {
+      changeText: `scope update ${now}`,
+      proposedPlanText: `updated plan ${now}`,
+    },
+  });
+  const changeRequestId = createdChangeRequest?.changeRequest?.id;
+  assert(changeRequestId, "Change request creation failed");
+  console.log(`[smoke] change request created: ${changeRequestId}`);
+
+  const adminLogin = await request("/api/auth/login", {
+    method: "POST",
+    json: { employeeId: "admin001", password: "Admin1234!" },
+  });
+  const adminToken = adminLogin?.token;
+  assert(adminToken, "Admin login token missing");
+  console.log("[smoke] admin login ok");
+
+  await request(`/api/admin/change-requests/${changeRequestId}/review`, {
+    method: "POST",
+    token: adminToken,
+    json: { status: "APPROVED", comment: "smoke approve change request" },
+  });
+  console.log("[smoke] admin review change request APPROVED ok");
+
+  const detailAfterChange = await request(`/api/work-items/${workItemId}`, {
+    token: employeeToken,
+  });
+  assert(
+    Array.isArray(detailAfterChange?.changeRequests) &&
+      detailAfterChange.changeRequests.some(
+        (changeRequest) =>
+          changeRequest.id === changeRequestId && changeRequest.status === "APPROVED",
+      ),
+    "Approved change request not found in work item detail",
+  );
+  console.log("[smoke] change request status reflected in detail ok");
+
   const createdSubmission = await request(`/api/work-items/${workItemId}/submissions`, {
     method: "POST",
     token: employeeToken,
+    json: { changeRequestId },
   });
   const submissionId = createdSubmission?.submission?.id;
   assert(submissionId, "Submission creation failed");
+  assert(
+    createdSubmission?.submission?.changeRequestId === changeRequestId,
+    "Submission did not link approved change request",
+  );
   console.log(`[smoke] submission created: ${submissionId}`);
 
   const form = new FormData();
@@ -126,14 +171,6 @@ async function main() {
     "Submission status endpoint mismatch before admin review",
   );
   console.log("[smoke] submission status (employee) ok");
-
-  const adminLogin = await request("/api/auth/login", {
-    method: "POST",
-    json: { employeeId: "admin001", password: "Admin1234!" },
-  });
-  const adminToken = adminLogin?.token;
-  assert(adminToken, "Admin login token missing");
-  console.log("[smoke] admin login ok");
 
   await request(`/api/admin/work-items?q=${encodeURIComponent(title)}`, {
     token: adminToken,

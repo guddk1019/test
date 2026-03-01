@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { FormEvent, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createSubmission,
   finalizeSubmission,
+  getWorkItemDetail,
   uploadSubmissionFiles,
 } from "@/lib/api/service";
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,22 @@ export default function SubmitResultPage() {
   const [noteText, setNoteText] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [uploadPercent, setUploadPercent] = useState(0);
+  const [selectedChangeRequestId, setSelectedChangeRequestId] = useState("");
   const [result, setResult] = useState<FinalizeSubmissionResponse["submission"] | null>(null);
+
+  const detailQuery = useQuery({
+    queryKey: ["work-item-detail", workItemId],
+    queryFn: () => getWorkItemDetail(workItemId),
+    enabled: Number.isFinite(workItemId) && workItemId > 0,
+  });
+
+  const approvedChangeRequests = useMemo(
+    () =>
+      (detailQuery.data?.changeRequests ?? []).filter(
+        (changeRequest) => changeRequest.status === "APPROVED",
+      ),
+    [detailQuery.data?.changeRequests],
+  );
 
   const canSubmit = useMemo(
     () => Number.isFinite(workItemId) && workItemId > 0 && files.length > 0,
@@ -30,7 +46,11 @@ export default function SubmitResultPage() {
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const created = await createSubmission(workItemId);
+      const created = await createSubmission(workItemId, {
+        changeRequestId: selectedChangeRequestId
+          ? Number(selectedChangeRequestId)
+          : undefined,
+      });
       await uploadSubmissionFiles(created.submission.id, files, setUploadPercent);
       const finalized = await finalizeSubmission(created.submission.id, {
         noteText: noteText.trim() || undefined,
@@ -52,14 +72,16 @@ export default function SubmitResultPage() {
   return (
     <section className="mx-auto max-w-3xl space-y-5">
       <div className="rounded-xl border border-slate-200 bg-white p-6">
-        <h1 className="text-xl font-bold text-slate-900">결과 제출</h1>
+        <h1 className="text-xl font-bold text-slate-900">Submit Result</h1>
         <p className="mt-2 text-sm text-slate-500">
-          제출 생성(v001/v002...) 후 파일 업로드, 제출 확정 순서로 처리됩니다.
+          Create submission version, upload files, then finalize.
         </p>
 
         <form className="mt-5 space-y-4" onSubmit={onSubmit}>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">결과 파일</label>
+            <label className="mb-1 block text-sm font-medium text-slate-700">
+              Result files
+            </label>
             <input
               className="block w-full rounded-md border border-slate-300 p-2 text-sm"
               type="file"
@@ -67,25 +89,46 @@ export default function SubmitResultPage() {
               onChange={(event) => setFiles(Array.from(event.target.files ?? []))}
             />
             <p className="mt-1 text-xs text-slate-500">
-              총 {files.length}개 파일 선택됨 (필수)
+              {files.length} file(s) selected
             </p>
           </div>
 
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">
-              결과 요약 코멘트 (선택)
+              Linked change request (optional)
+            </label>
+            <select
+              className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
+              value={selectedChangeRequestId}
+              onChange={(event) => setSelectedChangeRequestId(event.target.value)}
+            >
+              <option value="">None</option>
+              {approvedChangeRequests.map((changeRequest) => (
+                <option key={changeRequest.id} value={String(changeRequest.id)}>
+                  v{String(changeRequest.version).padStart(3, "0")} - {changeRequest.changeText}
+                </option>
+              ))}
+            </select>
+            {detailQuery.isError ? (
+              <p className="mt-1 text-xs text-rose-700">{detailQuery.error.message}</p>
+            ) : null}
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">
+              Note (optional)
             </label>
             <textarea
               className="min-h-28 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
               value={noteText}
               onChange={(event) => setNoteText(event.target.value)}
-              placeholder="산출물 핵심 요약"
+              placeholder="Submission summary"
             />
           </div>
 
           {mutation.isPending ? (
             <div className="rounded-md bg-cyan-50 p-3 text-sm text-cyan-800">
-              업로드 진행률: {uploadPercent}%
+              Upload progress: {uploadPercent}%
             </div>
           ) : null}
           {mutation.isError ? (
@@ -96,11 +139,11 @@ export default function SubmitResultPage() {
 
           <div className="flex items-center gap-2">
             <Button disabled={!canSubmit || mutation.isPending} type="submit">
-              {mutation.isPending ? "제출 처리 중..." : "제출 확정"}
+              {mutation.isPending ? "Submitting..." : "Finalize Submission"}
             </Button>
             <Link href={`/work-items/${workItemId}`}>
               <Button variant="secondary" type="button">
-                상세로 돌아가기
+                Back to detail
               </Button>
             </Link>
           </div>
@@ -109,7 +152,7 @@ export default function SubmitResultPage() {
 
       {result ? (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
-          <h2 className="font-semibold text-emerald-900">제출 완료</h2>
+          <h2 className="font-semibold text-emerald-900">Submission completed</h2>
           <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-emerald-900">
             <span>Submission ID: {result.id}</span>
             <StatusBadge status={result.status} />
