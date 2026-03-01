@@ -56,6 +56,13 @@ function getRangeStartTimestamp(range: RangeFilter): number | null {
   return Date.now() - days * 24 * 60 * 60 * 1000;
 }
 
+function formatPercent(value: number | null): string {
+  if (value === null || Number.isNaN(value)) {
+    return "-";
+  }
+  return `${value.toFixed(1)}%`;
+}
+
 export default function AdminQueuePage() {
   const [status, setStatus] = useState<"" | WorkItemStatus>("SUBMITTED");
   const [department, setDepartment] = useState("");
@@ -105,7 +112,14 @@ export default function AdminQueuePage() {
     queryFn: async () => {
       const details = await Promise.all(ids.map((id) => getAdminWorkItemDetail(id)));
       const durations: number[] = [];
+      const changeReviewDurations: number[] = [];
       const processingByWorkItemId: Record<number, number | null> = {};
+      const changeRequestCounts = {
+        total: 0,
+        requested: 0,
+        approved: 0,
+        rejected: 0,
+      };
 
       for (const detail of details) {
         let latestProcessed: { updatedAt: number; durationHours: number } | null = null;
@@ -137,17 +151,58 @@ export default function AdminQueuePage() {
         processingByWorkItemId[detail.workItem.id] = latestProcessed
           ? latestProcessed.durationHours
           : null;
+
+        for (const changeRequest of detail.changeRequests ?? []) {
+          const createdAt = new Date(changeRequest.createdAt).getTime();
+          if (Number.isNaN(createdAt)) {
+            continue;
+          }
+          if (rangeStart && createdAt < rangeStart) {
+            continue;
+          }
+
+          changeRequestCounts.total += 1;
+          if (changeRequest.status === "REQUESTED") {
+            changeRequestCounts.requested += 1;
+          } else if (changeRequest.status === "APPROVED") {
+            changeRequestCounts.approved += 1;
+          } else if (changeRequest.status === "REJECTED") {
+            changeRequestCounts.rejected += 1;
+          }
+
+          if (!["APPROVED", "REJECTED"].includes(changeRequest.status)) {
+            continue;
+          }
+          const reviewedAt = new Date(changeRequest.reviewedAt ?? "").getTime();
+          if (Number.isNaN(reviewedAt) || reviewedAt < createdAt) {
+            continue;
+          }
+          const reviewHours = (reviewedAt - createdAt) / 1000 / 60 / 60;
+          changeReviewDurations.push(reviewHours);
+        }
       }
 
       const avg =
         durations.length > 0
           ? durations.reduce((acc, value) => acc + value, 0) / durations.length
           : null;
+      const avgChangeReview =
+        changeReviewDurations.length > 0
+          ? changeReviewDurations.reduce((acc, value) => acc + value, 0) /
+            changeReviewDurations.length
+          : null;
+      const approvalRate =
+        changeRequestCounts.total > 0
+          ? (changeRequestCounts.approved / changeRequestCounts.total) * 100
+          : null;
 
       return {
         durations,
         averageProcessingHours: avg,
         processingByWorkItemId,
+        changeRequestCounts,
+        averageChangeReviewHours: avgChangeReview,
+        changeRequestApprovalRate: approvalRate,
       };
     },
   });
@@ -247,6 +302,42 @@ export default function AdminQueuePage() {
           <div className="text-xs text-slate-500">Avg. Processing Time</div>
           <div className="mt-2 text-2xl font-bold text-slate-900">
             {formatHours(metricsQuery.data?.averageProcessingHours ?? null)}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-5">
+        <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="text-xs text-slate-500">Change Requests</div>
+          <div className="mt-2 text-2xl font-bold text-slate-900">
+            {metricsQuery.data?.changeRequestCounts.total ?? 0}
+          </div>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="text-xs text-slate-500">Requested</div>
+          <div className="mt-2 text-2xl font-bold text-amber-700">
+            {metricsQuery.data?.changeRequestCounts.requested ?? 0}
+          </div>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="text-xs text-slate-500">Approved</div>
+          <div className="mt-2 text-2xl font-bold text-emerald-700">
+            {metricsQuery.data?.changeRequestCounts.approved ?? 0}
+          </div>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="text-xs text-slate-500">Rejected</div>
+          <div className="mt-2 text-2xl font-bold text-rose-700">
+            {metricsQuery.data?.changeRequestCounts.rejected ?? 0}
+          </div>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="text-xs text-slate-500">Approval Rate / Avg Review</div>
+          <div className="mt-2 text-xl font-bold text-slate-900">
+            {formatPercent(metricsQuery.data?.changeRequestApprovalRate ?? null)}
+          </div>
+          <div className="mt-1 text-xs text-slate-500">
+            {formatHours(metricsQuery.data?.averageChangeReviewHours ?? null)}
           </div>
         </div>
       </div>
