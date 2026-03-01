@@ -139,8 +139,12 @@ test.describe("MVP core flow", () => {
       await adminPage.locator(`a[href="/admin/work-items/${workItemId}"]`).first().click();
       await expect(adminPage).toHaveURL(new RegExp(`/admin/work-items/${workItemId}$`));
 
-      await adminPage.locator("article").first().locator("select").first().selectOption("DONE");
-      await adminPage.locator("article").first().getByRole("button", { name: "Apply" }).click();
+      const submissionCard = adminPage
+        .locator("article")
+        .filter({ hasText: /^Submission v/i })
+        .first();
+      await submissionCard.locator("select").first().selectOption("DONE");
+      await submissionCard.getByRole("button", { name: "Apply" }).click();
     } finally {
       await adminContext.close();
     }
