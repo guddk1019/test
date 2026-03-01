@@ -8,6 +8,7 @@ Use this checklist before every production release.
 - [ ] Release owner and rollback owner are assigned.
 
 ## 2) Build and tests
+- [ ] Run preflight once and attach evidence: `npm run release:preflight` (`.github/release-evidence/latest-preflight.md`)
 - [ ] Backend build: `npm run build`
 - [ ] Frontend lint: `npm --prefix frontend run lint`
 - [ ] Frontend build: `npm --prefix frontend run build`
