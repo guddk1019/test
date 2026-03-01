@@ -1,8 +1,7 @@
 test
 # Corp Performance MVP Server
 
-<!-- Replace OWNER/REPO after GitHub remote is connected -->
-![CI](https://github.com/OWNER/REPO/actions/workflows/ci.yml/badge.svg)
+[![CI](https://github.com/guddk1019/test/actions/workflows/ci.yml/badge.svg)](https://github.com/guddk1019/test/actions/workflows/ci.yml)
 
 MVP backend for:
 - Employee app (Windows desktop, Electron) -> API upload -> NAS storage
@@ -117,8 +116,4 @@ PR template:
 - `.github/pull_request_template.md`
 
 ## 13) CI badge setup
-Current badge URL uses placeholder repository path.
-
-1. Open this file and replace `OWNER/REPO` in the badge URL at the top.
-2. Push changes to GitHub.
-3. Confirm badge changes to passing/failing status after workflow run.
+The badge is configured for `guddk1019/test`.
