@@ -61,6 +61,8 @@ Defaults from `.env`:
 - `GET /api/work-items/me`
 - `POST /api/work-items`
 - `GET /api/work-items/:workItemId`
+- `GET /api/work-items/:workItemId/change-requests`
+- `POST /api/work-items/:workItemId/change-requests`
 - `POST /api/work-items/:workItemId/submissions`
 - `POST /api/submissions/:submissionId/files` (multipart field: `files`)
 - `POST /api/submissions/:submissionId/finalize`
@@ -70,6 +72,11 @@ Defaults from `.env`:
 - `GET /api/admin/work-items`
 - `GET /api/admin/work-items/:workItemId`
 - `POST /api/admin/submissions/:submissionId/review`
+- `POST /api/admin/change-requests/:changeRequestId/review`
+
+### Migration note
+- New migration added: `sql/002_change_requests.sql`
+- Run: `npm run db:migrate`
 
 ## 8) Status model
 
@@ -121,6 +128,9 @@ Branch protection setup reference:
 
 PR template:
 - `.github/pull_request_template.md`
+
+Release checklist:
+- `.github/release-checklist.md`
 
 ## 13) CI badge setup
 The badge is configured for `guddk1019/test`.

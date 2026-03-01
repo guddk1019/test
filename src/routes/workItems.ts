@@ -25,6 +25,8 @@ interface SubmissionRow {
   work_item_id: number;
   version: number;
   status: "UPLOADING" | "SUBMITTED" | "EVALUATING" | "DONE" | "REJECTED";
+  change_request_id: number | null;
+  change_request_version: number | null;
   note_text: string | null;
   submitted_at: string | null;
   created_at: string;
@@ -43,6 +45,24 @@ interface ArtifactRow {
   created_at: string;
 }
 
+interface ChangeRequestRow {
+  id: number;
+  work_item_id: number;
+  requester_user_id: number;
+  requester_employee_id: string;
+  requester_name: string;
+  version: number;
+  status: "REQUESTED" | "APPROVED" | "REJECTED";
+  change_text: string;
+  proposed_plan_text: string | null;
+  proposed_due_date: string | null;
+  reviewer_user_id: number | null;
+  reviewer_comment: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export const workItemsRouter = Router();
 workItemsRouter.use(requireAuth);
 
@@ -56,6 +76,44 @@ const WORK_ITEM_STATUSES = new Set([
 const MAX_QUERY_LENGTH = 100;
 const MAX_TITLE_LENGTH = 200;
 const MAX_PLAN_TEXT_LENGTH = 10_000;
+const MAX_CHANGE_TEXT_LENGTH = 2_000;
+
+async function getWorkItemForAccessCheck(workItemId: number): Promise<WorkItemRow> {
+  const itemResult = await query<WorkItemRow>(
+    `
+      SELECT
+        w.id,
+        w.owner_user_id,
+        w.title,
+        w.plan_text,
+        w.due_date,
+        w.status,
+        w.created_at,
+        w.updated_at,
+        u.full_name AS owner_full_name,
+        u.employee_id AS owner_employee_id,
+        u.department AS owner_department
+      FROM work_items w
+      JOIN users u ON u.id = w.owner_user_id
+      WHERE w.id = $1
+    `,
+    [workItemId],
+  );
+  const workItem = itemResult.rows[0];
+  if (!workItem) {
+    throw new HttpError(404, "Work item not found.");
+  }
+  return workItem;
+}
+
+function ensureWorkItemAccess(
+  user: { id: number; role: "EMPLOYEE" | "ADMIN" },
+  workItem: WorkItemRow,
+): void {
+  if (user.role !== "ADMIN" && workItem.owner_user_id !== user.id) {
+    throw new HttpError(403, "Forbidden.");
+  }
+}
 
 workItemsRouter.get(
   "/me",
@@ -157,6 +215,170 @@ workItemsRouter.post(
 );
 
 workItemsRouter.get(
+  "/:workItemId/change-requests",
+  asyncHandler(async (req, res) => {
+    const user = req.user!;
+    const workItemId = parseId(req.params.workItemId);
+    if (!workItemId) {
+      throw new HttpError(400, "Invalid workItemId.");
+    }
+
+    const workItem = await getWorkItemForAccessCheck(workItemId);
+    ensureWorkItemAccess(user, workItem);
+
+    const result = await query<ChangeRequestRow>(
+      `
+        SELECT
+          c.id,
+          c.work_item_id,
+          c.requester_user_id,
+          ru.employee_id AS requester_employee_id,
+          ru.full_name AS requester_name,
+          c.version,
+          c.status,
+          c.change_text,
+          c.proposed_plan_text,
+          c.proposed_due_date,
+          c.reviewer_user_id,
+          c.reviewer_comment,
+          c.reviewed_at,
+          c.created_at,
+          c.updated_at
+        FROM change_requests c
+        JOIN users ru ON ru.id = c.requester_user_id
+        WHERE c.work_item_id = $1
+        ORDER BY c.version DESC
+      `,
+      [workItemId],
+    );
+
+    res.json({
+      changeRequests: result.rows.map((row) => ({
+        id: row.id,
+        workItemId: row.work_item_id,
+        requesterUserId: row.requester_user_id,
+        requesterEmployeeId: row.requester_employee_id,
+        requesterName: row.requester_name,
+        version: row.version,
+        status: row.status,
+        changeText: row.change_text,
+        proposedPlanText: row.proposed_plan_text,
+        proposedDueDate: row.proposed_due_date,
+        reviewerUserId: row.reviewer_user_id,
+        reviewerComment: row.reviewer_comment,
+        reviewedAt: row.reviewed_at,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      })),
+    });
+  }),
+);
+
+workItemsRouter.post(
+  "/:workItemId/change-requests",
+  asyncHandler(async (req, res) => {
+    const user = req.user!;
+    const workItemId = parseId(req.params.workItemId);
+    if (!workItemId) {
+      throw new HttpError(400, "Invalid workItemId.");
+    }
+
+    const changeText = String(req.body?.changeText ?? "").trim();
+    const proposedPlanTextRaw = String(req.body?.proposedPlanText ?? "").trim();
+    const proposedDueDateRaw = String(req.body?.proposedDueDate ?? "").trim();
+    const proposedPlanText = proposedPlanTextRaw.length > 0 ? proposedPlanTextRaw : null;
+    const proposedDueDate = proposedDueDateRaw.length > 0 ? proposedDueDateRaw : null;
+
+    if (!changeText) {
+      throw new HttpError(400, "changeText is required.");
+    }
+    if (changeText.length > MAX_CHANGE_TEXT_LENGTH) {
+      throw new HttpError(400, "changeText is too long.");
+    }
+    if (proposedPlanText && proposedPlanText.length > MAX_PLAN_TEXT_LENGTH) {
+      throw new HttpError(400, "proposedPlanText is too long.");
+    }
+    if (proposedDueDate && !isIsoDate(proposedDueDate)) {
+      throw new HttpError(400, "proposedDueDate must be YYYY-MM-DD.");
+    }
+    if (!proposedPlanText && !proposedDueDate) {
+      throw new HttpError(400, "At least one proposed field is required.");
+    }
+
+    const workItem = await getWorkItemForAccessCheck(workItemId);
+    ensureWorkItemAccess(user, workItem);
+
+    const inserted = await query<ChangeRequestRow>(
+      `
+        INSERT INTO change_requests (
+          work_item_id,
+          requester_user_id,
+          version,
+          status,
+          change_text,
+          proposed_plan_text,
+          proposed_due_date
+        )
+        VALUES (
+          $1,
+          $2,
+          (SELECT COALESCE(MAX(version), 0) + 1 FROM change_requests WHERE work_item_id = $1),
+          'REQUESTED',
+          $3,
+          $4,
+          $5
+        )
+        RETURNING
+          id,
+          work_item_id,
+          requester_user_id,
+          version,
+          status,
+          change_text,
+          proposed_plan_text,
+          proposed_due_date,
+          reviewer_user_id,
+          reviewer_comment,
+          reviewed_at,
+          created_at,
+          updated_at
+      `,
+      [workItemId, user.id, changeText, proposedPlanText, proposedDueDate],
+    );
+    const changeRequest = inserted.rows[0];
+
+    await writeAuditLog({
+      actorUserId: user.id,
+      action: "change_request.create",
+      targetType: "change_request",
+      targetId: changeRequest.id,
+      meta: {
+        workItemId,
+        version: changeRequest.version,
+      },
+    });
+
+    res.status(201).json({
+      changeRequest: {
+        id: changeRequest.id,
+        workItemId: changeRequest.work_item_id,
+        requesterUserId: changeRequest.requester_user_id,
+        version: changeRequest.version,
+        status: changeRequest.status,
+        changeText: changeRequest.change_text,
+        proposedPlanText: changeRequest.proposed_plan_text,
+        proposedDueDate: changeRequest.proposed_due_date,
+        reviewerUserId: changeRequest.reviewer_user_id,
+        reviewerComment: changeRequest.reviewer_comment,
+        reviewedAt: changeRequest.reviewed_at,
+        createdAt: changeRequest.created_at,
+        updatedAt: changeRequest.updated_at,
+      },
+    });
+  }),
+);
+
+workItemsRouter.get(
   "/:workItemId",
   asyncHandler(async (req, res) => {
     const user = req.user!;
@@ -165,40 +387,26 @@ workItemsRouter.get(
       throw new HttpError(400, "Invalid workItemId.");
     }
 
-    const itemResult = await query<WorkItemRow>(
-      `
-        SELECT
-          w.id,
-          w.owner_user_id,
-          w.title,
-          w.plan_text,
-          w.due_date,
-          w.status,
-          w.created_at,
-          w.updated_at,
-          u.full_name AS owner_full_name,
-          u.employee_id AS owner_employee_id,
-          u.department AS owner_department
-        FROM work_items w
-        JOIN users u ON u.id = w.owner_user_id
-        WHERE w.id = $1
-      `,
-      [workItemId],
-    );
-    const workItem = itemResult.rows[0];
-    if (!workItem) {
-      throw new HttpError(404, "Work item not found.");
-    }
-    if (user.role !== "ADMIN" && workItem.owner_user_id !== user.id) {
-      throw new HttpError(403, "Forbidden.");
-    }
+    const workItem = await getWorkItemForAccessCheck(workItemId);
+    ensureWorkItemAccess(user, workItem);
 
     const submissionResult = await query<SubmissionRow>(
       `
-        SELECT id, work_item_id, version, status, note_text, submitted_at, created_at, updated_at
-        FROM submissions
-        WHERE work_item_id = $1
-        ORDER BY version DESC
+        SELECT
+          s.id,
+          s.work_item_id,
+          s.version,
+          s.status,
+          s.change_request_id,
+          c.version AS change_request_version,
+          s.note_text,
+          s.submitted_at,
+          s.created_at,
+          s.updated_at
+        FROM submissions s
+        LEFT JOIN change_requests c ON c.id = s.change_request_id
+        WHERE s.work_item_id = $1
+        ORDER BY s.version DESC
       `,
       [workItemId],
     );
@@ -220,6 +428,32 @@ workItemsRouter.get(
       );
       artifactRows = artifactResult.rows;
     }
+
+    const changeResult = await query<ChangeRequestRow>(
+      `
+        SELECT
+          c.id,
+          c.work_item_id,
+          c.requester_user_id,
+          ru.employee_id AS requester_employee_id,
+          ru.full_name AS requester_name,
+          c.version,
+          c.status,
+          c.change_text,
+          c.proposed_plan_text,
+          c.proposed_due_date,
+          c.reviewer_user_id,
+          c.reviewer_comment,
+          c.reviewed_at,
+          c.created_at,
+          c.updated_at
+        FROM change_requests c
+        JOIN users ru ON ru.id = c.requester_user_id
+        WHERE c.work_item_id = $1
+        ORDER BY c.version DESC
+      `,
+      [workItemId],
+    );
 
     const artifactsBySubmission = new Map<number, ArtifactRow[]>();
     for (const artifact of artifactRows) {
@@ -246,6 +480,8 @@ workItemsRouter.get(
         id: submission.id,
         version: submission.version,
         status: submission.status,
+        changeRequestId: submission.change_request_id,
+        changeRequestVersion: submission.change_request_version,
         noteText: submission.note_text,
         submittedAt: submission.submitted_at,
         createdAt: submission.created_at,
@@ -260,6 +496,23 @@ workItemsRouter.get(
           mimeType: artifact.mime_type,
           createdAt: artifact.created_at,
         })),
+      })),
+      changeRequests: changeResult.rows.map((row) => ({
+        id: row.id,
+        workItemId: row.work_item_id,
+        requesterUserId: row.requester_user_id,
+        requesterEmployeeId: row.requester_employee_id,
+        requesterName: row.requester_name,
+        version: row.version,
+        status: row.status,
+        changeText: row.change_text,
+        proposedPlanText: row.proposed_plan_text,
+        proposedDueDate: row.proposed_due_date,
+        reviewerUserId: row.reviewer_user_id,
+        reviewerComment: row.reviewer_comment,
+        reviewedAt: row.reviewed_at,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
       })),
     });
   }),

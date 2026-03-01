@@ -14,6 +14,8 @@ export type SubmissionStatus =
   | "DONE"
   | "REJECTED";
 
+export type ChangeRequestStatus = "REQUESTED" | "APPROVED" | "REJECTED";
+
 export interface AuthUser {
   id: number;
   employeeId: string;
@@ -71,6 +73,8 @@ export interface SubmissionDetail {
   id: number;
   version: number;
   status: SubmissionStatus;
+  changeRequestId?: number | null;
+  changeRequestVersion?: number | null;
   noteText: string | null;
   submittedAt: string | null;
   createdAt: string;
@@ -79,9 +83,29 @@ export interface SubmissionDetail {
   fileCount?: number;
 }
 
+export interface ChangeRequestDetail {
+  id: number;
+  workItemId: number;
+  requesterUserId: number;
+  requesterEmployeeId: string;
+  requesterName: string;
+  version: number;
+  status: ChangeRequestStatus;
+  changeText: string;
+  proposedPlanText: string | null;
+  proposedDueDate: string | null;
+  reviewerUserId: number | null;
+  reviewerName?: string | null;
+  reviewerComment: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface WorkItemDetailResponse {
   workItem: WorkItemDetail;
   submissions: SubmissionDetail[];
+  changeRequests: ChangeRequestDetail[];
 }
 
 export interface CreateWorkItemRequest {
@@ -108,6 +132,7 @@ export interface CreateSubmissionResponse {
     id: number;
     workItemId: number;
     version: number;
+    changeRequestId: number | null;
     status: SubmissionStatus;
     createdAt: string;
   };
@@ -147,6 +172,7 @@ export interface SubmissionStatusResponse {
   submission: {
     id: number;
     workItemId: number;
+    changeRequestId: number | null;
     status: SubmissionStatus;
     noteText: string | null;
     submittedAt: string | null;
@@ -174,6 +200,7 @@ export interface AdminWorkItemListResponse {
 export interface AdminWorkItemDetailResponse {
   workItem: WorkItemDetail;
   submissions: SubmissionDetail[];
+  changeRequests: ChangeRequestDetail[];
 }
 
 export interface AdminReviewRequest {
@@ -189,6 +216,39 @@ export interface AdminReviewResponse {
     status: SubmissionStatus;
     noteText: string | null;
     submittedAt: string | null;
+    updatedAt: string;
+  };
+  comment: string | null;
+}
+
+export interface CreateChangeRequestRequest {
+  changeText: string;
+  proposedPlanText?: string;
+  proposedDueDate?: string;
+}
+
+export interface CreateChangeRequestResponse {
+  changeRequest: ChangeRequestDetail;
+}
+
+export interface ReviewChangeRequestRequest {
+  status: "APPROVED" | "REJECTED";
+  comment?: string;
+}
+
+export interface ReviewChangeRequestResponse {
+  changeRequest: {
+    id: number;
+    workItemId: number;
+    version: number;
+    status: ChangeRequestStatus;
+    changeText: string;
+    proposedPlanText: string | null;
+    proposedDueDate: string | null;
+    reviewerUserId: number | null;
+    reviewerComment: string | null;
+    reviewedAt: string | null;
+    createdAt: string;
     updatedAt: string;
   };
   comment: string | null;

@@ -3,22 +3,48 @@
 import { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getAdminWorkItemDetail, getWorkItemDetail, reviewSubmission } from "@/lib/api/service";
+import {
+  getAdminWorkItemDetail,
+  getWorkItemDetail,
+  reviewChangeRequest,
+  reviewSubmission,
+} from "@/lib/api/service";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatBytes, formatDate, formatDateTime, shortHash } from "@/lib/utils";
-import { AdminReviewRequest, FileArtifact } from "@/lib/types";
+import {
+  AdminReviewRequest,
+  ChangeRequestStatus,
+  FileArtifact,
+  ReviewChangeRequestRequest,
+} from "@/lib/types";
 
 type ReviewFormState = {
   status: AdminReviewRequest["status"];
   comment: string;
 };
 
+type ChangeReviewFormState = {
+  status: ReviewChangeRequestRequest["status"];
+  comment: string;
+};
+
+function changeRequestStatusClass(status: ChangeRequestStatus): string {
+  if (status === "APPROVED") {
+    return "bg-emerald-100 text-emerald-800";
+  }
+  if (status === "REJECTED") {
+    return "bg-rose-100 text-rose-800";
+  }
+  return "bg-amber-100 text-amber-800";
+}
+
 export default function AdminWorkItemDetailPage() {
   const params = useParams<{ workItemId: string }>();
   const workItemId = Number(params.workItemId);
   const queryClient = useQueryClient();
   const [forms, setForms] = useState<Record<number, ReviewFormState>>({});
+  const [changeForms, setChangeForms] = useState<Record<number, ChangeReviewFormState>>({});
 
   const detailQuery = useQuery({
     queryKey: ["admin-work-item-detail", workItemId],
@@ -42,6 +68,16 @@ export default function AdminWorkItemDetailPage() {
     },
   });
 
+  const changeMutation = useMutation({
+    mutationFn: (input: { changeRequestId: number; payload: ReviewChangeRequestRequest }) =>
+      reviewChangeRequest(input.changeRequestId, input.payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-work-item-detail", workItemId] });
+      queryClient.invalidateQueries({ queryKey: ["work-item-detail", workItemId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-work-items"] });
+    },
+  });
+
   const filesBySubmission = useMemo(() => {
     const map = new Map<number, FileArtifact[]>();
     for (const submission of artifactQuery.data?.submissions ?? []) {
@@ -53,6 +89,14 @@ export default function AdminWorkItemDetailPage() {
   const defaultForm = useMemo<ReviewFormState>(
     () => ({
       status: "DONE",
+      comment: "",
+    }),
+    [],
+  );
+
+  const defaultChangeForm = useMemo<ChangeReviewFormState>(
+    () => ({
+      status: "APPROVED",
       comment: "",
     }),
     [],
@@ -72,7 +116,7 @@ export default function AdminWorkItemDetailPage() {
     return null;
   }
 
-  const { workItem, submissions } = detailQuery.data;
+  const { workItem, submissions, changeRequests } = detailQuery.data;
 
   return (
     <section className="space-y-5">
@@ -92,6 +136,108 @@ export default function AdminWorkItemDetailPage() {
         <p className="mt-4 whitespace-pre-wrap rounded-md bg-slate-50 p-4 text-sm text-slate-700">
           {workItem.planText}
         </p>
+      </div>
+
+      <div className="space-y-4">
+        {changeRequests.length === 0 ? (
+          <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-500">
+            No change requests found.
+          </div>
+        ) : (
+          changeRequests.map((changeRequest) => {
+            const form = changeForms[changeRequest.id] ?? defaultChangeForm;
+            const canReview = changeRequest.status === "REQUESTED";
+
+            return (
+              <article
+                key={changeRequest.id}
+                className="rounded-xl border border-slate-200 bg-white p-5"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="font-semibold text-slate-900">
+                    Change Request v{String(changeRequest.version).padStart(3, "0")}
+                  </div>
+                  <span
+                    className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${changeRequestStatusClass(changeRequest.status)}`}
+                  >
+                    {changeRequest.status}
+                  </span>
+                </div>
+
+                <div className="mt-3 text-sm text-slate-700">{changeRequest.changeText}</div>
+
+                <div className="mt-3 grid gap-2 text-sm text-slate-600 sm:grid-cols-3">
+                  <span>Requester: {changeRequest.requesterName}</span>
+                  <span>Proposed due: {formatDate(changeRequest.proposedDueDate)}</span>
+                  <span>Reviewed: {formatDateTime(changeRequest.reviewedAt)}</span>
+                </div>
+
+                {changeRequest.proposedPlanText ? (
+                  <p className="mt-3 rounded-md bg-slate-50 p-3 text-sm text-slate-700">
+                    {changeRequest.proposedPlanText}
+                  </p>
+                ) : null}
+
+                {changeRequest.reviewerComment ? (
+                  <p className="mt-3 rounded-md bg-slate-50 p-3 text-sm text-slate-700">
+                    Reviewer comment: {changeRequest.reviewerComment}
+                  </p>
+                ) : null}
+
+                {canReview ? (
+                  <div className="mt-4 grid gap-2 sm:grid-cols-[170px_1fr_auto]">
+                    <select
+                      className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                      value={form.status}
+                      onChange={(event) =>
+                        setChangeForms((previous) => ({
+                          ...previous,
+                          [changeRequest.id]: {
+                            ...form,
+                            status: event.target.value as ReviewChangeRequestRequest["status"],
+                          },
+                        }))
+                      }
+                    >
+                      <option value="APPROVED">Approve (APPROVED)</option>
+                      <option value="REJECTED">Reject (REJECTED)</option>
+                    </select>
+                    <input
+                      className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                      value={form.comment}
+                      onChange={(event) =>
+                        setChangeForms((previous) => ({
+                          ...previous,
+                          [changeRequest.id]: {
+                            ...form,
+                            comment: event.target.value,
+                          },
+                        }))
+                      }
+                      placeholder="Review comment"
+                    />
+                    <Button
+                      disabled={changeMutation.isPending}
+                      onClick={() =>
+                        changeMutation.mutate({
+                          changeRequestId: changeRequest.id,
+                          payload: {
+                            status: form.status,
+                            comment: form.comment.trim() || undefined,
+                          },
+                        })
+                      }
+                      type="button"
+                      variant={form.status === "REJECTED" ? "danger" : "primary"}
+                    >
+                      {changeMutation.isPending ? "Saving..." : "Apply"}
+                    </Button>
+                  </div>
+                ) : null}
+              </article>
+            );
+          })
+        )}
       </div>
 
       <div className="space-y-4">
@@ -118,7 +264,12 @@ export default function AdminWorkItemDetailPage() {
                 <div className="mt-3 grid gap-2 text-sm text-slate-600 sm:grid-cols-3">
                   <span>Submitted: {formatDateTime(submission.submittedAt)}</span>
                   <span>Updated: {formatDateTime(submission.updatedAt)}</span>
-                  <span>Files: {files.length || submission.fileCount || 0}</span>
+                  <span>
+                    Files: {files.length || submission.fileCount || 0}
+                    {submission.changeRequestVersion
+                      ? ` / Change v${String(submission.changeRequestVersion).padStart(3, "0")}`
+                      : ""}
+                  </span>
                 </div>
 
                 {submission.noteText ? (

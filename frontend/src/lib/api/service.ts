@@ -7,6 +7,8 @@ import {
   AdminReviewResponse,
   AdminWorkItemDetailResponse,
   AdminWorkItemListResponse,
+  CreateChangeRequestRequest,
+  CreateChangeRequestResponse,
   CreateSubmissionResponse,
   CreateWorkItemRequest,
   CreateWorkItemResponse,
@@ -16,6 +18,8 @@ import {
   LoginResponse,
   SubmissionStatusResponse,
   UploadResponse,
+  ReviewChangeRequestRequest,
+  ReviewChangeRequestResponse,
   WorkItemDetailResponse,
   WorkItemSummary,
 } from "../types";
@@ -81,9 +85,13 @@ export async function getWorkItemDetail(
 
 export async function createSubmission(
   workItemId: number,
+  input?: { changeRequestId?: number | null },
 ): Promise<CreateSubmissionResponse> {
   const response = await apiClient.post<CreateSubmissionResponse>(
     `/api/work-items/${workItemId}/submissions`,
+    {
+      changeRequestId: input?.changeRequestId ?? undefined,
+    },
   );
   return response.data;
 }
@@ -171,6 +179,28 @@ export async function reviewSubmission(
 ): Promise<AdminReviewResponse> {
   const response = await apiClient.post<AdminReviewResponse>(
     `/api/admin/submissions/${submissionId}/review`,
+    input,
+  );
+  return response.data;
+}
+
+export async function createChangeRequest(
+  workItemId: number,
+  input: CreateChangeRequestRequest,
+): Promise<CreateChangeRequestResponse> {
+  const response = await apiClient.post<CreateChangeRequestResponse>(
+    `/api/work-items/${workItemId}/change-requests`,
+    input,
+  );
+  return response.data;
+}
+
+export async function reviewChangeRequest(
+  changeRequestId: number,
+  input: ReviewChangeRequestRequest,
+): Promise<ReviewChangeRequestResponse> {
+  const response = await apiClient.post<ReviewChangeRequestResponse>(
+    `/api/admin/change-requests/${changeRequestId}/review`,
     input,
   );
   return response.data;

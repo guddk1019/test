@@ -4,6 +4,11 @@
 export const backendRouteMap = [
   {
     "method": "POST",
+    "path": "/api/admin/change-requests/:changeRequestId/review",
+    "sourceFile": "src/routes/admin.ts"
+  },
+  {
+    "method": "POST",
     "path": "/api/admin/submissions/:submissionId/review",
     "sourceFile": "src/routes/admin.ts"
   },
@@ -45,6 +50,16 @@ export const backendRouteMap = [
   {
     "method": "GET",
     "path": "/api/work-items/:workItemId",
+    "sourceFile": "src/routes/workItems.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/api/work-items/:workItemId/change-requests",
+    "sourceFile": "src/routes/workItems.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/api/work-items/:workItemId/change-requests",
     "sourceFile": "src/routes/workItems.ts"
   },
   {
