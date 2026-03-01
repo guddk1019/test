@@ -139,12 +139,76 @@ test.describe("MVP core flow", () => {
       await adminPage.locator(`a[href="/admin/work-items/${workItemId}"]`).first().click();
       await expect(adminPage).toHaveURL(new RegExp(`/admin/work-items/${workItemId}$`));
 
-      await adminPage.locator("article").first().locator("select").first().selectOption("DONE");
-      await adminPage.locator("article").first().getByRole("button", { name: "Apply" }).click();
+      const submissionCard = adminPage
+        .locator("article")
+        .filter({ hasText: /^Submission v/i })
+        .first();
+      await submissionCard.locator("select").first().selectOption("DONE");
+      await submissionCard.getByRole("button", { name: "Apply" }).click();
     } finally {
       await adminContext.close();
     }
 
     await waitForSubmissionStatus(submissionId, "DONE", adminToken);
+  });
+
+  test("admin change-request filters and search", async ({ page }) => {
+    const suffix = `${Date.now()}`;
+    const title = `E2E CR Filter ${suffix}`;
+    const planText = `E2E CR plan ${suffix}`;
+    const changeText = `E2E CR reason ${suffix}`;
+
+    const employeeToken = await loginByApi(employeeCredentials);
+
+    const createdWorkItem = await requestJson<{
+      item: { id: number };
+    }>("/api/work-items", {
+      method: "POST",
+      token: employeeToken,
+      json: {
+        title,
+        planText,
+        dueDate: buildDueDate(10),
+      },
+    });
+    const workItemId = createdWorkItem.item.id;
+    expect(workItemId).toBeGreaterThan(0);
+
+    const createdChangeRequest = await requestJson<{
+      changeRequest: { id: number; status: string };
+    }>(`/api/work-items/${workItemId}/change-requests`, {
+      method: "POST",
+      token: employeeToken,
+      json: {
+        changeText,
+        proposedPlanText: `${planText} (updated)`,
+      },
+    });
+    expect(createdChangeRequest.changeRequest.id).toBeGreaterThan(0);
+    expect(createdChangeRequest.changeRequest.status).toBe("REQUESTED");
+
+    await loginByUi(page, adminCredentials);
+    await expect(page).toHaveURL(/\/admin$/);
+
+    await page.goto("/admin/change-requests");
+    await expect(page).toHaveURL(/\/admin\/change-requests$/);
+
+    await page.locator("select").first().selectOption("REQUESTED");
+    await page
+      .getByPlaceholder("Requester employee ID")
+      .fill(employeeCredentials.employeeId);
+    await page.getByPlaceholder("Search work item title / reason").fill(title);
+    await page.getByRole("button", { name: "Search" }).click();
+
+    const row = page
+      .locator("tbody tr")
+      .filter({ has: page.getByRole("link", { name: title }) })
+      .first();
+    await expect(row).toBeVisible();
+    await expect(row).toContainText("REQUESTED");
+    await expect(row).toContainText(employeeCredentials.employeeId);
+
+    await row.getByRole("link", { name: title }).click();
+    await expect(page).toHaveURL(new RegExp(`/admin/work-items/${workItemId}$`));
   });
 });

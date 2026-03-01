@@ -38,6 +38,9 @@ export default defineConfig({
         ...process.env,
         PORT: process.env.PORT ?? "4000",
         CORS_ORIGIN: frontendBaseUrl,
+        LOGIN_RATE_LIMIT_WINDOW_MS: process.env.LOGIN_RATE_LIMIT_WINDOW_MS ?? "600000",
+        LOGIN_RATE_LIMIT_MAX_ATTEMPTS:
+          process.env.LOGIN_RATE_LIMIT_MAX_ATTEMPTS ?? "1000",
       },
     },
     {

@@ -4,7 +4,7 @@ import { requireAuth, requireRole } from "../middleware/auth";
 import { HttpError } from "../middleware/error";
 import { writeAuditLog } from "../services/audit";
 import { asyncHandler } from "../utils/asyncHandler";
-import { parseId } from "../utils/validators";
+import { isIsoDate, parseId } from "../utils/validators";
 
 interface WorkItemListRow {
   id: number;
@@ -38,6 +38,22 @@ interface ChangeRequestRow {
   updated_at: string;
 }
 
+interface ChangeRequestListRow {
+  id: number;
+  work_item_id: number;
+  work_item_title: string;
+  requester_user_id: number;
+  requester_employee_id: string;
+  requester_name: string;
+  version: number;
+  status: "REQUESTED" | "APPROVED" | "REJECTED";
+  change_text: string;
+  proposed_due_date: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export const adminRouter = Router();
 adminRouter.use(requireAuth, requireRole("ADMIN"));
 
@@ -54,6 +70,8 @@ const MAX_DEPARTMENT_LENGTH = 100;
 const MAX_EMPLOYEE_ID_LENGTH = 64;
 const MAX_REVIEW_COMMENT_LENGTH = 2_000;
 const CHANGE_REVIEW_STATUSES = new Set(["APPROVED", "REJECTED"]);
+const CHANGE_REQUEST_STATUSES = new Set(["REQUESTED", "APPROVED", "REJECTED"]);
+const MAX_DATE_LENGTH = 10;
 
 adminRouter.get(
   "/work-items",
@@ -129,6 +147,107 @@ adminRouter.get(
         ownerName: row.owner_name,
         ownerDepartment: row.owner_department,
         latestSubmissionVersion: row.latest_submission_version,
+        updatedAt: row.updated_at,
+      })),
+    });
+  }),
+);
+
+adminRouter.get(
+  "/change-requests",
+  asyncHandler(async (req, res) => {
+    const status = String(req.query.status ?? "").trim().toUpperCase();
+    const requesterEmployeeId = String(req.query.requesterEmployeeId ?? "").trim();
+    const fromDate = String(req.query.fromDate ?? "").trim();
+    const toDate = String(req.query.toDate ?? "").trim();
+    const keyword = String(req.query.q ?? "").trim();
+
+    if (status && !CHANGE_REQUEST_STATUSES.has(status)) {
+      throw new HttpError(400, "Invalid change request status filter.");
+    }
+    if (requesterEmployeeId.length > MAX_EMPLOYEE_ID_LENGTH) {
+      throw new HttpError(400, "requesterEmployeeId is too long.");
+    }
+    if (keyword.length > MAX_QUERY_LENGTH) {
+      throw new HttpError(400, "Search keyword is too long.");
+    }
+    if (fromDate.length > MAX_DATE_LENGTH || toDate.length > MAX_DATE_LENGTH) {
+      throw new HttpError(400, "Invalid date length.");
+    }
+    if (fromDate && !isIsoDate(fromDate)) {
+      throw new HttpError(400, "fromDate must be YYYY-MM-DD.");
+    }
+    if (toDate && !isIsoDate(toDate)) {
+      throw new HttpError(400, "toDate must be YYYY-MM-DD.");
+    }
+
+    const values: unknown[] = [];
+    const clauses: string[] = [];
+
+    if (status) {
+      values.push(status);
+      clauses.push(`c.status = $${values.length}`);
+    }
+    if (requesterEmployeeId) {
+      values.push(`%${requesterEmployeeId}%`);
+      clauses.push(`ru.employee_id ILIKE $${values.length}`);
+    }
+    if (fromDate) {
+      values.push(fromDate);
+      clauses.push(`c.created_at::date >= $${values.length}`);
+    }
+    if (toDate) {
+      values.push(toDate);
+      clauses.push(`c.created_at::date <= $${values.length}`);
+    }
+    if (keyword) {
+      values.push(`%${keyword}%`);
+      clauses.push(
+        `(w.title ILIKE $${values.length} OR c.change_text ILIKE $${values.length})`,
+      );
+    }
+
+    const whereSql = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
+
+    const result = await query<ChangeRequestListRow>(
+      `
+        SELECT
+          c.id,
+          c.work_item_id,
+          w.title AS work_item_title,
+          c.requester_user_id,
+          ru.employee_id AS requester_employee_id,
+          ru.full_name AS requester_name,
+          c.version,
+          c.status,
+          c.change_text,
+          c.proposed_due_date,
+          c.reviewed_at,
+          c.created_at,
+          c.updated_at
+        FROM change_requests c
+        JOIN work_items w ON w.id = c.work_item_id
+        JOIN users ru ON ru.id = c.requester_user_id
+        ${whereSql}
+        ORDER BY c.created_at DESC
+      `,
+      values,
+    );
+
+    res.json({
+      items: result.rows.map((row) => ({
+        id: row.id,
+        workItemId: row.work_item_id,
+        workItemTitle: row.work_item_title,
+        requesterUserId: row.requester_user_id,
+        requesterEmployeeId: row.requester_employee_id,
+        requesterName: row.requester_name,
+        version: row.version,
+        status: row.status,
+        changeText: row.change_text,
+        proposedDueDate: row.proposed_due_date,
+        reviewedAt: row.reviewed_at,
+        createdAt: row.created_at,
         updatedAt: row.updated_at,
       })),
     });

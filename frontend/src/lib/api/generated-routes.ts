@@ -3,6 +3,11 @@
 
 export const backendRouteMap = [
   {
+    "method": "GET",
+    "path": "/api/admin/change-requests",
+    "sourceFile": "src/routes/admin.ts"
+  },
+  {
     "method": "POST",
     "path": "/api/admin/change-requests/:changeRequestId/review",
     "sourceFile": "src/routes/admin.ts"

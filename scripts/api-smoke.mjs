@@ -108,12 +108,38 @@ async function main() {
   assert(adminToken, "Admin login token missing");
   console.log("[smoke] admin login ok");
 
+  const requestedList = await request(
+    `/api/admin/change-requests?status=REQUESTED&requesterEmployeeId=emp001&q=${encodeURIComponent(
+      title,
+    )}`,
+    { token: adminToken },
+  );
+  assert(
+    Array.isArray(requestedList?.items) &&
+      requestedList.items.some((item) => item.id === changeRequestId),
+    "Change request list filter did not return REQUESTED item",
+  );
+  console.log("[smoke] change request list filter (REQUESTED) ok");
+
   await request(`/api/admin/change-requests/${changeRequestId}/review`, {
     method: "POST",
     token: adminToken,
     json: { status: "APPROVED", comment: "smoke approve change request" },
   });
   console.log("[smoke] admin review change request APPROVED ok");
+
+  const approvedList = await request(
+    `/api/admin/change-requests?status=APPROVED&requesterEmployeeId=emp001&q=${encodeURIComponent(
+      title,
+    )}`,
+    { token: adminToken },
+  );
+  assert(
+    Array.isArray(approvedList?.items) &&
+      approvedList.items.some((item) => item.id === changeRequestId),
+    "Change request list filter did not return APPROVED item",
+  );
+  console.log("[smoke] change request list filter (APPROVED) ok");
 
   const detailAfterChange = await request(`/api/work-items/${workItemId}`, {
     token: employeeToken,

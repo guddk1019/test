@@ -70,6 +70,7 @@ Defaults from `.env`:
 
 ### Admin APIs
 - `GET /api/admin/work-items`
+- `GET /api/admin/change-requests`
 - `GET /api/admin/work-items/:workItemId`
 - `POST /api/admin/submissions/:submissionId/review`
 - `POST /api/admin/change-requests/:changeRequestId/review`

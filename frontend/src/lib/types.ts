@@ -197,6 +197,26 @@ export interface AdminWorkItemListResponse {
   items: AdminWorkItemSummary[];
 }
 
+export interface AdminChangeRequestSummary {
+  id: number;
+  workItemId: number;
+  workItemTitle: string;
+  requesterUserId: number;
+  requesterEmployeeId: string;
+  requesterName: string;
+  version: number;
+  status: ChangeRequestStatus;
+  changeText: string;
+  proposedDueDate: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminChangeRequestListResponse {
+  items: AdminChangeRequestSummary[];
+}
+
 export interface AdminWorkItemDetailResponse {
   workItem: WorkItemDetail;
   submissions: SubmissionDetail[];

@@ -18,8 +18,9 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { href: "/work-items", label: "내 업무", roles: ["EMPLOYEE", "ADMIN"] },
-  { href: "/admin", label: "관리자 큐", roles: ["ADMIN"] },
+  { href: "/work-items", label: "My Work Items", roles: ["EMPLOYEE", "ADMIN"] },
+  { href: "/admin", label: "Admin Queue", roles: ["ADMIN"] },
+  { href: "/admin/change-requests", label: "Change Requests", roles: ["ADMIN"] },
 ];
 
 export function AppShell({ children }: AppShellProps) {
@@ -61,7 +62,7 @@ export function AppShell({ children }: AppShellProps) {
               </div>
             </div>
             <Button variant="ghost" onClick={logout}>
-              로그아웃
+              Log out
             </Button>
           </div>
         </div>

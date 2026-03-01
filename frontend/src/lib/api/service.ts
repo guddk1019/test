@@ -3,6 +3,7 @@
 import { AxiosProgressEvent } from "axios";
 import { apiClient } from "./client";
 import {
+  AdminChangeRequestListResponse,
   AdminReviewRequest,
   AdminReviewResponse,
   AdminWorkItemDetailResponse,
@@ -158,6 +159,28 @@ export async function getAdminWorkItems(params?: {
         q: params?.q || undefined,
         department: params?.department || undefined,
         ownerEmployeeId: params?.ownerEmployeeId || undefined,
+      },
+    },
+  );
+  return response.data;
+}
+
+export async function getAdminChangeRequests(params?: {
+  status?: string;
+  requesterEmployeeId?: string;
+  fromDate?: string;
+  toDate?: string;
+  q?: string;
+}): Promise<AdminChangeRequestListResponse> {
+  const response = await apiClient.get<AdminChangeRequestListResponse>(
+    "/api/admin/change-requests",
+    {
+      params: {
+        status: params?.status || undefined,
+        requesterEmployeeId: params?.requesterEmployeeId || undefined,
+        fromDate: params?.fromDate || undefined,
+        toDate: params?.toDate || undefined,
+        q: params?.q || undefined,
       },
     },
   );
