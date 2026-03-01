@@ -140,6 +140,7 @@ PR template:
 
 Release checklist:
 - `.github/release-checklist.md`
+- `docs/v0.2-db-api-draft.md` (next phase DB/API draft)
 
 ## 14) CI badge setup
 The badge is configured for `guddk1019/test`.
