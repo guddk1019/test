@@ -3,7 +3,7 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: "Corp Performance Frontend",
+  title: "업무 성과 관리 시스템",
   description: "업무 성과 관리 시스템 프론트엔드",
 };
 

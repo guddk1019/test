@@ -35,7 +35,7 @@ export function formatHours(value: number | null): string {
   if (value === null || Number.isNaN(value)) {
     return "-";
   }
-  return `${value.toFixed(1)}h`;
+  return `${value.toFixed(1)}시간`;
 }
 
 export function formatBytes(value: number | null | undefined): string {

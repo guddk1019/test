@@ -38,6 +38,31 @@ export const backendRouteMap = [
     "sourceFile": "src/routes/submissions.ts"
   },
   {
+    "method": "DELETE",
+    "path": "/api/submissions/:submissionId/files/:fileArtifactId",
+    "sourceFile": "src/routes/submissions.ts"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/submissions/:submissionId/files/:fileArtifactId",
+    "sourceFile": "src/routes/submissions.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/api/submissions/:submissionId/files/:fileArtifactId/download",
+    "sourceFile": "src/routes/submissions.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/api/submissions/:submissionId/files/:fileArtifactId/revisions",
+    "sourceFile": "src/routes/submissions.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/api/submissions/:submissionId/files/:fileArtifactId/revisions/:revisionId/download",
+    "sourceFile": "src/routes/submissions.ts"
+  },
+  {
     "method": "POST",
     "path": "/api/submissions/:submissionId/finalize",
     "sourceFile": "src/routes/submissions.ts"

@@ -153,6 +153,16 @@ export interface UploadResponse {
   uploaded: UploadResult[];
 }
 
+export interface ReplaceSubmissionFileResponse {
+  file: UploadResult;
+}
+
+export interface DeleteSubmissionFileResponse {
+  deleted: {
+    id: number;
+  };
+}
+
 export interface FinalizeSubmissionRequest {
   noteText?: string;
 }

@@ -18,9 +18,9 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { href: "/work-items", label: "My Work Items", roles: ["EMPLOYEE", "ADMIN"] },
-  { href: "/admin", label: "Admin Queue", roles: ["ADMIN"] },
-  { href: "/admin/change-requests", label: "Change Requests", roles: ["ADMIN"] },
+  { href: "/work-items", label: "내 업무", roles: ["EMPLOYEE", "ADMIN"] },
+  { href: "/admin", label: "관리자 제출 큐", roles: ["ADMIN"] },
+  { href: "/admin/change-requests", label: "변경요청", roles: ["ADMIN"] },
 ];
 
 export function AppShell({ children }: AppShellProps) {
@@ -33,7 +33,7 @@ export function AppShell({ children }: AppShellProps) {
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-6">
             <Link href="/" className="text-lg font-bold text-cyan-800">
-              Corp Performance
+              업무 성과 관리
             </Link>
             <nav className="flex items-center gap-2">
               {NAV_ITEMS.filter((item) =>
@@ -62,7 +62,7 @@ export function AppShell({ children }: AppShellProps) {
               </div>
             </div>
             <Button variant="ghost" onClick={logout}>
-              Log out
+              로그아웃
             </Button>
           </div>
         </div>

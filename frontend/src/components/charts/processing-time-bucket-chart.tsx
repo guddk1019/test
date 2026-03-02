@@ -27,10 +27,10 @@ type Bucket = {
 export type ProcessingBucketKey = "lt1" | "h1to4" | "h4to24" | "gte24";
 
 export const PROCESSING_BUCKET_LABELS: Record<ProcessingBucketKey, string> = {
-  lt1: "< 1h",
-  h1to4: "1h - 4h",
-  h4to24: "4h - 24h",
-  gte24: ">= 24h",
+  lt1: "1시간 미만",
+  h1to4: "1~4시간",
+  h4to24: "4~24시간",
+  gte24: "24시간 이상",
 };
 
 const BUCKETS: Bucket[] = [
@@ -81,9 +81,9 @@ export function ProcessingTimeBucketChart({
 
   return (
     <div className="space-y-2">
-      <div className="text-sm font-semibold text-slate-800">Processing Time Buckets</div>
+      <div className="text-sm font-semibold text-slate-800">처리 시간 구간</div>
       {total === 0 ? (
-        <div className="text-xs text-slate-500">No processed submissions yet</div>
+        <div className="text-xs text-slate-500">처리 완료된 제출이 아직 없습니다.</div>
       ) : (
         <div className="h-52">
           <ResponsiveContainer width="100%" height="100%">
