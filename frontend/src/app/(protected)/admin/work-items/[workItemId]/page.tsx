@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
@@ -145,13 +145,13 @@ export default function AdminWorkItemDetailPage() {
       setFileActionError(null);
       await downloadSubmissionFile(submissionId, fileArtifactId, fileName);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "파일 다운로드에 실패했습니다.";
+      const message = error instanceof Error ? error.message : "?뚯씪 ?ㅼ슫濡쒕뱶???ㅽ뙣?덉뒿?덈떎.";
       setFileActionError(message);
     }
   };
 
   if (detailQuery.isLoading) {
-    return <div className="rounded-xl border border-slate-200 bg-white p-6">상세 정보를 불러오는 중입니다.</div>;
+    return <div className="rounded-xl border border-slate-200 bg-white p-6">?곸꽭 ?뺣낫瑜?遺덈윭?ㅻ뒗 以묒엯?덈떎.</div>;
   }
 
   if (detailQuery.isError) {
@@ -175,13 +175,13 @@ export default function AdminWorkItemDetailPage() {
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <StatusBadge status={workItem.status} />
           <span className="text-sm text-slate-500">
-            담당자: {workItem.ownerName} ({workItem.ownerEmployeeId}) / {workItem.ownerDepartment}
+            ?대떦?? {workItem.ownerName} ({workItem.ownerEmployeeId}) / {workItem.ownerDepartment}
           </span>
         </div>
         <div className="mt-4 grid gap-2 text-sm text-slate-600 sm:grid-cols-3">
-          <span>기한: {formatDate(workItem.dueDate)}</span>
-          <span>생성일: {formatDateTime(workItem.createdAt)}</span>
-          <span>수정일: {formatDateTime(workItem.updatedAt)}</span>
+          <span>湲고븳: {formatDate(workItem.dueDate)}</span>
+          <span>?앹꽦?? {formatDateTime(workItem.createdAt)}</span>
+          <span>?섏젙?? {formatDateTime(workItem.updatedAt)}</span>
         </div>
         <p className="mt-4 whitespace-pre-wrap rounded-md bg-slate-50 p-4 text-sm text-slate-700">{workItem.planText}</p>
       </div>
@@ -189,7 +189,7 @@ export default function AdminWorkItemDetailPage() {
       <div className="space-y-4">
         {changeRequests.length === 0 ? (
           <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-500">
-            변경 요청이 없습니다.
+            蹂寃??붿껌???놁뒿?덈떎.
           </div>
         ) : (
           changeRequests.map((changeRequest) => {
@@ -201,7 +201,7 @@ export default function AdminWorkItemDetailPage() {
               <article key={changeRequest.id} className="rounded-xl border border-slate-200 bg-white p-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="font-semibold text-slate-900">
-                    변경요청 v{String(changeRequest.version).padStart(3, "0")}
+                    蹂寃쎌슂泥?v{String(changeRequest.version).padStart(3, "0")}
                   </div>
                   <span
                     className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${changeRequestStatusClass(changeRequest.status)}`}
@@ -213,9 +213,9 @@ export default function AdminWorkItemDetailPage() {
                 <div className="mt-3 text-sm text-slate-700">{changeRequest.changeText}</div>
 
                 <div className="mt-3 grid gap-2 text-sm text-slate-600 sm:grid-cols-3">
-                  <span>요청자: {changeRequest.requesterName}</span>
-                  <span>변경 기한: {formatDate(changeRequest.proposedDueDate)}</span>
-                  <span>검토 시각: {formatDateTime(changeRequest.reviewedAt)}</span>
+                  <span>?붿껌?? {changeRequest.requesterName}</span>
+                  <span>蹂寃?湲고븳: {formatDate(changeRequest.proposedDueDate)}</span>
+                  <span>寃???쒓컖: {formatDateTime(changeRequest.reviewedAt)}</span>
                 </div>
 
                 {changeRequest.proposedPlanText ? (
@@ -226,7 +226,7 @@ export default function AdminWorkItemDetailPage() {
 
                 {changeRequest.reviewerComment ? (
                   <p className="mt-3 rounded-md bg-slate-50 p-3 text-sm text-slate-700">
-                    검토 코멘트: {changeRequest.reviewerComment}
+                    寃??肄붾찘?? {changeRequest.reviewerComment}
                   </p>
                 ) : null}
 
@@ -245,8 +245,8 @@ export default function AdminWorkItemDetailPage() {
                         }))
                       }
                     >
-                      <option value="APPROVED">승인</option>
-                      <option value="REJECTED">반려</option>
+                      <option value="APPROVED">?뱀씤</option>
+                      <option value="REJECTED">諛섎젮</option>
                     </select>
                     <input
                       className="h-10 rounded-md border border-slate-300 px-3 text-sm"
@@ -276,13 +276,13 @@ export default function AdminWorkItemDetailPage() {
                         })
                       }
                     >
-                      {changeReviewMutation.isPending ? "처리 중..." : "적용"}
+                      {changeReviewMutation.isPending ? "泥섎━ 以?.." : "?곸슜"}
                     </Button>
                   </div>
                 ) : null}
 
                 {canReview && isRejectWithoutComment ? (
-                  <p className="mt-2 text-xs text-rose-700">반려 시 코멘트 입력이 필요합니다.</p>
+                  <p className="mt-2 text-xs text-rose-700">諛섎젮 ??肄붾찘???낅젰???꾩슂?⑸땲??</p>
                 ) : null}
               </article>
             );
@@ -293,7 +293,7 @@ export default function AdminWorkItemDetailPage() {
       <div className="space-y-4">
         {submissions.length === 0 ? (
           <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-500">
-            제출 내역이 없습니다.
+            ?쒖텧 ?댁뿭???놁뒿?덈떎.
           </div>
         ) : (
           submissions.map((submission) => {
@@ -302,19 +302,23 @@ export default function AdminWorkItemDetailPage() {
             const isRejectWithoutComment = form.status === "REJECTED" && !form.comment.trim();
 
             return (
-              <article key={submission.id} className="rounded-xl border border-slate-200 bg-white p-5">
+              <article
+                key={submission.id}
+                className="rounded-xl border border-slate-200 bg-white p-5"
+                data-testid={`admin-submission-card-${submission.id}`}
+              >
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="font-semibold text-slate-900">제출 v{String(submission.version).padStart(3, "0")}</div>
+                  <div className="font-semibold text-slate-900">?쒖텧 v{String(submission.version).padStart(3, "0")}</div>
                   <StatusBadge status={submission.status} />
                 </div>
 
                 <div className="mt-3 grid gap-2 text-sm text-slate-600 sm:grid-cols-3">
-                  <span>제출 시각: {formatDateTime(submission.submittedAt)}</span>
-                  <span>수정 시각: {formatDateTime(submission.updatedAt)}</span>
+                  <span>?쒖텧 ?쒓컖: {formatDateTime(submission.submittedAt)}</span>
+                  <span>?섏젙 ?쒓컖: {formatDateTime(submission.updatedAt)}</span>
                   <span>
-                    파일 수: {files.length || submission.fileCount || 0}
+                    ?뚯씪 ?? {files.length || submission.fileCount || 0}
                     {submission.changeRequestVersion
-                      ? ` / 변경요청 v${String(submission.changeRequestVersion).padStart(3, "0")}`
+                      ? ` / 蹂寃쎌슂泥?v${String(submission.changeRequestVersion).padStart(3, "0")}`
                       : ""}
                   </span>
                 </div>
@@ -328,17 +332,17 @@ export default function AdminWorkItemDetailPage() {
                     <thead className="bg-slate-50 text-left uppercase tracking-wide text-slate-500">
                       <tr>
                         <th className="px-3 py-2">파일명</th>
-                        <th className="px-3 py-2">크기</th>
-                        <th className="px-3 py-2">형식</th>
+                        <th className="px-3 py-2">?ш린</th>
+                        <th className="px-3 py-2">?뺤떇</th>
                         <th className="px-3 py-2">SHA256</th>
-                        <th className="px-3 py-2">작업</th>
+                        <th className="px-3 py-2">?묒뾽</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {files.length === 0 ? (
                         <tr>
                           <td className="px-3 py-2 text-slate-500" colSpan={5}>
-                            파일 메타데이터가 없습니다.
+                            ?뚯씪 硫뷀??곗씠?곌? ?놁뒿?덈떎.
                           </td>
                         </tr>
                       ) : (
@@ -358,12 +362,12 @@ export default function AdminWorkItemDetailPage() {
                                   className="h-8 px-2 text-xs"
                                   onClick={() => onDownloadFile(submission.id, file.id, file.originalFilename)}
                                 >
-                                  다운로드
+                                  ?ㅼ슫濡쒕뱶
                                 </Button>
                                 {submission.status === "UPLOADING" || submission.status === "SUBMITTED" ? (
                                   <>
                                     <label className="inline-flex h-8 cursor-pointer items-center justify-center rounded-md border border-slate-300 bg-white px-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">
-                                      수정
+                                      ?섏젙
                                       <input
                                         className="hidden"
                                         type="file"
@@ -388,7 +392,7 @@ export default function AdminWorkItemDetailPage() {
                                         className="h-8 px-2 text-xs"
                                         disabled={deleteFileMutation.isPending}
                                         onClick={() => {
-                                          const shouldDelete = window.confirm("이 파일을 삭제하시겠습니까?");
+                                          const shouldDelete = window.confirm("???뚯씪????젣?섏떆寃좎뒿?덇퉴?");
                                           if (!shouldDelete) {
                                             return;
                                           }
@@ -398,13 +402,13 @@ export default function AdminWorkItemDetailPage() {
                                           });
                                         }}
                                       >
-                                        삭제
+                                        ??젣
                                       </Button>
                                     ) : null}
                                   </>
                                 ) : (
                                   <span className="text-[11px] font-medium text-slate-500">
-                                    수정 불가 ({submission.status})
+                                    ?섏젙 遺덇? ({submission.status})
                                   </span>
                                 )}
                               </div>
@@ -420,6 +424,7 @@ export default function AdminWorkItemDetailPage() {
                   <select
                     className="h-10 rounded-md border border-slate-300 px-3 text-sm"
                     value={form.status}
+                    data-testid={`admin-submission-status-${submission.id}`}
                     onChange={(event) =>
                       setForms((prev) => ({
                         ...prev,
@@ -430,8 +435,8 @@ export default function AdminWorkItemDetailPage() {
                       }))
                     }
                   >
-                    <option value="DONE">승인</option>
-                    <option value="REJECTED">반려</option>
+                    <option value="DONE">?뱀씤</option>
+                    <option value="REJECTED">諛섎젮</option>
                     <option value="EVALUATING">평가중</option>
                   </select>
                   <input
@@ -452,6 +457,7 @@ export default function AdminWorkItemDetailPage() {
                     type="button"
                     variant={form.status === "REJECTED" ? "danger" : "primary"}
                     disabled={reviewMutation.isPending || isRejectWithoutComment}
+                    data-testid={`admin-submission-apply-${submission.id}`}
                     onClick={() =>
                       reviewMutation.mutate({
                         submissionId: submission.id,
@@ -462,12 +468,12 @@ export default function AdminWorkItemDetailPage() {
                       })
                     }
                   >
-                    {reviewMutation.isPending ? "처리 중..." : "적용"}
+                    {reviewMutation.isPending ? "泥섎━ 以?.." : "?곸슜"}
                   </Button>
                 </div>
 
                 {isRejectWithoutComment ? (
-                  <p className="mt-2 text-xs text-rose-700">반려 시 코멘트 입력이 필요합니다.</p>
+                  <p className="mt-2 text-xs text-rose-700">諛섎젮 ??肄붾찘???낅젰???꾩슂?⑸땲??</p>
                 ) : null}
               </article>
             );
@@ -483,3 +489,5 @@ export default function AdminWorkItemDetailPage() {
     </section>
   );
 }
+
+

@@ -118,7 +118,9 @@ test.describe("MVP core flow", () => {
     });
     await page.locator("textarea").fill(noteText);
     await page.locator('button[type="submit"]').click();
-    await expect(page.getByText("Submission ID:")).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId("submission-result-id")).toBeVisible({
+      timeout: 30_000,
+    });
 
     const adminToken = await loginByApi(adminCredentials);
     const detail = await requestJson<{
@@ -134,19 +136,22 @@ test.describe("MVP core flow", () => {
       await loginByUi(adminPage, adminCredentials);
       await expect(adminPage).toHaveURL(/\/admin$/);
 
-      await adminPage.getByPlaceholder("Search title/plan text").fill(title);
-      await adminPage.getByRole("button", { name: "Search" }).click();
+      await adminPage.getByTestId("admin-workitems-search-input").fill(title);
+      await adminPage.getByTestId("admin-workitems-search-button").click();
       await adminPage.locator(`a[href="/admin/work-items/${workItemId}"]`).first().click();
       await expect(adminPage).toHaveURL(new RegExp(`/admin/work-items/${workItemId}$`));
 
-      const submissionCard = adminPage
-        .locator("article")
-        .filter({ hasText: /^Submission v/i })
-        .first();
-      const applyButton = submissionCard.getByRole("button", { name: "Apply" });
-      await submissionCard.locator("select").first().selectOption("REJECTED");
+      const targetSubmissionId = Number(submissionId);
+      const applyButton = adminPage.getByTestId(
+        `admin-submission-apply-${targetSubmissionId}`,
+      );
+      await adminPage
+        .getByTestId(`admin-submission-status-${targetSubmissionId}`)
+        .selectOption("REJECTED");
       await expect(applyButton).toBeDisabled();
-      await submissionCard.locator("select").first().selectOption("DONE");
+      await adminPage
+        .getByTestId(`admin-submission-status-${targetSubmissionId}`)
+        .selectOption("DONE");
       await expect(applyButton).toBeEnabled();
       await applyButton.click();
     } finally {
@@ -197,19 +202,17 @@ test.describe("MVP core flow", () => {
     await page.goto("/admin/change-requests");
     await expect(page).toHaveURL(/\/admin\/change-requests$/);
 
-    await page.locator("select").first().selectOption("REQUESTED");
-    await page
-      .getByPlaceholder("Requester employee ID")
-      .fill(employeeCredentials.employeeId);
-    await page.getByPlaceholder("Search work item title / reason").fill(title);
-    await page.getByRole("button", { name: "Search" }).click();
+    await page.getByTestId("admin-cr-status-select").selectOption("REQUESTED");
+    await page.getByTestId("admin-cr-requester-input").fill(employeeCredentials.employeeId);
+    await page.getByTestId("admin-cr-search-input").fill(title);
+    await page.getByTestId("admin-cr-search-button").click();
 
     const row = page
       .locator("tbody tr")
       .filter({ has: page.getByRole("link", { name: title }) })
       .first();
     await expect(row).toBeVisible();
-    await expect(row).toContainText("REQUESTED");
+    await expect(row).toContainText(/REQUESTED|요청/);
     await expect(row).toContainText(employeeCredentials.employeeId);
 
     await row.getByRole("link", { name: title }).click();

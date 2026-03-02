@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -29,11 +29,13 @@ function rangeToFromDate(range: RangeFilter): string | undefined {
   if (range === "all") {
     return undefined;
   }
+
   const daysMap: Record<Exclude<RangeFilter, "all">, number> = {
     "7d": 7,
     "30d": 30,
     "90d": 90,
   };
+
   const date = new Date();
   date.setDate(date.getDate() - daysMap[range]);
   return date.toISOString().slice(0, 10);
@@ -60,13 +62,7 @@ export default function AdminChangeRequestsPage() {
   const fromDate = useMemo(() => rangeToFromDate(range), [range]);
 
   const query = useQuery({
-    queryKey: [
-      "admin-change-requests",
-      status,
-      requesterEmployeeId,
-      keyword,
-      fromDate,
-    ],
+    queryKey: ["admin-change-requests", status, requesterEmployeeId, keyword, fromDate],
     queryFn: () =>
       getAdminChangeRequests({
         status: status || undefined,
@@ -119,9 +115,8 @@ export default function AdminChangeRequestsPage() {
           <select
             className="h-10 rounded-md border border-slate-300 px-3 text-sm"
             value={status}
-            onChange={(event) =>
-              setStatus(event.target.value as "" | ChangeRequestStatus)
-            }
+            onChange={(event) => setStatus(event.target.value as "" | ChangeRequestStatus)}
+            data-testid="admin-cr-status-select"
           >
             {STATUS_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -129,6 +124,7 @@ export default function AdminChangeRequestsPage() {
               </option>
             ))}
           </select>
+
           <select
             className="h-10 rounded-md border border-slate-300 px-3 text-sm"
             value={range}
@@ -140,18 +136,23 @@ export default function AdminChangeRequestsPage() {
               </option>
             ))}
           </select>
+
           <input
             className="h-10 rounded-md border border-slate-300 px-3 text-sm"
             value={requesterEmployeeIdInput}
             onChange={(event) => setRequesterEmployeeIdInput(event.target.value)}
+            data-testid="admin-cr-requester-input"
             placeholder="요청자 사번"
           />
+
           <input
             className="h-10 rounded-md border border-slate-300 px-3 text-sm"
             value={searchInput}
             onChange={(event) => setSearchInput(event.target.value)}
+            data-testid="admin-cr-search-input"
             placeholder="업무명/요청 사유 검색"
           />
+
           <Button
             variant="secondary"
             onClick={() => {
@@ -159,6 +160,7 @@ export default function AdminChangeRequestsPage() {
               setKeyword(searchInput.trim());
             }}
             type="button"
+            data-testid="admin-cr-search-button"
           >
             검색
           </Button>
@@ -166,11 +168,9 @@ export default function AdminChangeRequestsPage() {
 
         <div className="overflow-x-auto">
           {query.isLoading ? (
-            <div className="py-6 text-sm text-slate-500">변경요청을 불러오는 중...</div>
+            <div className="py-6 text-sm text-slate-500">변경요청을 불러오는 중입니다.</div>
           ) : query.isError ? (
-            <div className="py-6 text-sm font-medium text-rose-700">
-              {query.error.message}
-            </div>
+            <div className="py-6 text-sm font-medium text-rose-700">{query.error.message}</div>
           ) : (
             <table className="min-w-full divide-y divide-slate-200 text-sm">
               <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
@@ -197,18 +197,14 @@ export default function AdminChangeRequestsPage() {
                       >
                         {item.workItemTitle}
                       </Link>
-                      <div className="mt-1 line-clamp-2 text-xs text-slate-500">
-                        {item.changeText}
-                      </div>
+                      <div className="mt-1 line-clamp-2 text-xs text-slate-500">{item.changeText}</div>
                     </td>
                     <td className="px-4 py-3 text-slate-600">
                       {item.requesterName}
                       <div className="text-xs text-slate-500">{item.requesterEmployeeId}</div>
                     </td>
                     <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${statusClass(item.status)}`}
-                      >
+                      <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${statusClass(item.status)}`}>
                         {CHANGE_REQUEST_STATUS_LABEL[item.status]}
                       </span>
                     </td>
@@ -223,7 +219,7 @@ export default function AdminChangeRequestsPage() {
         </div>
 
         {!query.isLoading && (query.data?.items.length ?? 0) === 0 ? (
-          <div className="text-sm text-slate-500">현재 조건의 변경요청이 없습니다.</div>
+          <div className="text-sm text-slate-500">현재 조건에 변경요청이 없습니다.</div>
         ) : null}
       </div>
     </section>
