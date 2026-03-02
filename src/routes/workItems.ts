@@ -1,8 +1,13 @@
 import { Router } from "express";
-import { query } from "../db";
+import { pool, query } from "../db";
 import { requireAuth } from "../middleware/auth";
 import { HttpError } from "../middleware/error";
 import { writeAuditLog } from "../services/audit";
+import {
+  createNotifications,
+  listAdminUserIds,
+  normalizeRecipientIds,
+} from "../services/notifications";
 import { asyncHandler } from "../utils/asyncHandler";
 import { isIsoDate, parseId } from "../utils/validators";
 
@@ -63,6 +68,27 @@ interface ChangeRequestRow {
   updated_at: string;
 }
 
+interface SubmissionLinkRow {
+  id: number;
+  version: number;
+  work_item_id: number;
+}
+
+interface WorkItemCommentRow {
+  id: number;
+  work_item_id: number;
+  submission_id: number | null;
+  submission_version: number | null;
+  author_user_id: number;
+  author_employee_id: string;
+  author_name: string;
+  author_role: "EMPLOYEE" | "ADMIN";
+  parent_comment_id: number | null;
+  comment_text: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export const workItemsRouter = Router();
 workItemsRouter.use(requireAuth);
 
@@ -77,6 +103,7 @@ const MAX_QUERY_LENGTH = 100;
 const MAX_TITLE_LENGTH = 200;
 const MAX_PLAN_TEXT_LENGTH = 10_000;
 const MAX_CHANGE_TEXT_LENGTH = 2_000;
+const MAX_COMMENT_TEXT_LENGTH = 3_000;
 
 async function getWorkItemForAccessCheck(workItemId: number): Promise<WorkItemRow> {
   const itemResult = await query<WorkItemRow>(
@@ -113,6 +140,23 @@ function ensureWorkItemAccess(
   if (user.role !== "ADMIN" && workItem.owner_user_id !== user.id) {
     throw new HttpError(403, "Forbidden.");
   }
+}
+
+function mapCommentRow(row: WorkItemCommentRow) {
+  return {
+    id: row.id,
+    workItemId: row.work_item_id,
+    submissionId: row.submission_id,
+    submissionVersion: row.submission_version,
+    authorUserId: row.author_user_id,
+    authorEmployeeId: row.author_employee_id,
+    authorName: row.author_name,
+    authorRole: row.author_role,
+    parentCommentId: row.parent_comment_id,
+    commentText: row.comment_text,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
 }
 
 workItemsRouter.get(
@@ -274,6 +318,288 @@ workItemsRouter.get(
   }),
 );
 
+workItemsRouter.get(
+  "/:workItemId/comments",
+  asyncHandler(async (req, res) => {
+    const user = req.user!;
+    const workItemId = parseId(req.params.workItemId);
+    if (!workItemId) {
+      throw new HttpError(400, "Invalid workItemId.");
+    }
+
+    const submissionIdRaw = String(req.query.submissionId ?? "").trim();
+    const submissionId = submissionIdRaw.length > 0 ? parseId(submissionIdRaw) : null;
+    if (submissionIdRaw.length > 0 && !submissionId) {
+      throw new HttpError(400, "Invalid submissionId.");
+    }
+
+    const workItem = await getWorkItemForAccessCheck(workItemId);
+    ensureWorkItemAccess(user, workItem);
+
+    const values: unknown[] = [workItemId];
+    const clauses: string[] = ["c.work_item_id = $1"];
+
+    if (submissionId) {
+      const submissionResult = await query<SubmissionLinkRow>(
+        `
+          SELECT id, version, work_item_id
+          FROM submissions
+          WHERE id = $1
+        `,
+        [submissionId],
+      );
+      const submission = submissionResult.rows[0];
+      if (!submission || submission.work_item_id !== workItemId) {
+        throw new HttpError(400, "submissionId does not belong to this work item.");
+      }
+      values.push(submissionId);
+      clauses.push(`c.submission_id = $${values.length}`);
+    }
+
+    const result = await query<WorkItemCommentRow>(
+      `
+        SELECT
+          c.id,
+          c.work_item_id,
+          c.submission_id,
+          s.version AS submission_version,
+          c.author_user_id,
+          au.employee_id AS author_employee_id,
+          au.full_name AS author_name,
+          au.role AS author_role,
+          c.parent_comment_id,
+          c.comment_text,
+          c.created_at,
+          c.updated_at
+        FROM work_item_comments c
+        JOIN users au ON au.id = c.author_user_id
+        LEFT JOIN submissions s ON s.id = c.submission_id
+        WHERE ${clauses.join(" AND ")}
+        ORDER BY c.created_at ASC, c.id ASC
+      `,
+      values,
+    );
+
+    res.json({
+      comments: result.rows.map(mapCommentRow),
+    });
+  }),
+);
+
+workItemsRouter.post(
+  "/:workItemId/comments",
+  asyncHandler(async (req, res) => {
+    const user = req.user!;
+    const workItemId = parseId(req.params.workItemId);
+    if (!workItemId) {
+      throw new HttpError(400, "Invalid workItemId.");
+    }
+
+    const commentText = String(req.body?.commentText ?? "").trim();
+    const submissionIdRaw = req.body?.submissionId;
+    const parentCommentIdRaw = req.body?.parentCommentId;
+
+    let submissionId: number | null =
+      submissionIdRaw === undefined || submissionIdRaw === null || submissionIdRaw === ""
+        ? null
+        : parseId(String(submissionIdRaw));
+    const parentCommentId =
+      parentCommentIdRaw === undefined || parentCommentIdRaw === null || parentCommentIdRaw === ""
+        ? null
+        : parseId(String(parentCommentIdRaw));
+
+    if (!commentText) {
+      throw new HttpError(400, "commentText is required.");
+    }
+    if (commentText.length > MAX_COMMENT_TEXT_LENGTH) {
+      throw new HttpError(400, "commentText is too long.");
+    }
+    if (submissionIdRaw !== undefined && submissionIdRaw !== null && submissionIdRaw !== "" && !submissionId) {
+      throw new HttpError(400, "Invalid submissionId.");
+    }
+    if (
+      parentCommentIdRaw !== undefined &&
+      parentCommentIdRaw !== null &&
+      parentCommentIdRaw !== "" &&
+      !parentCommentId
+    ) {
+      throw new HttpError(400, "Invalid parentCommentId.");
+    }
+
+    const workItem = await getWorkItemForAccessCheck(workItemId);
+    ensureWorkItemAccess(user, workItem);
+
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      let submission: SubmissionLinkRow | null = null;
+      if (submissionId) {
+        const submissionResult = await client.query<SubmissionLinkRow>(
+          `
+            SELECT id, version, work_item_id
+            FROM submissions
+            WHERE id = $1
+          `,
+          [submissionId],
+        );
+        submission = submissionResult.rows[0] ?? null;
+        if (!submission || submission.work_item_id !== workItemId) {
+          throw new HttpError(400, "submissionId does not belong to this work item.");
+        }
+      }
+
+      const parentResult = parentCommentId
+        ? await client.query<{
+            id: number;
+            work_item_id: number;
+            submission_id: number | null;
+            author_user_id: number;
+          }>(
+            `
+              SELECT id, work_item_id, submission_id, author_user_id
+              FROM work_item_comments
+              WHERE id = $1
+            `,
+            [parentCommentId],
+          )
+        : null;
+      const parentComment = parentResult?.rows[0] ?? null;
+      if (parentCommentId && !parentComment) {
+        throw new HttpError(400, "parentCommentId not found.");
+      }
+      if (parentComment) {
+        if (parentComment.work_item_id !== workItemId) {
+          throw new HttpError(400, "parentCommentId does not belong to this work item.");
+        }
+        if (parentComment.submission_id) {
+          if (submissionId && submissionId !== parentComment.submission_id) {
+            throw new HttpError(400, "submissionId must match parent comment submission.");
+          }
+          submissionId = parentComment.submission_id;
+          if (!submission) {
+            const replySubmissionResult = await client.query<SubmissionLinkRow>(
+              `
+                SELECT id, version, work_item_id
+                FROM submissions
+                WHERE id = $1
+              `,
+              [submissionId],
+            );
+            submission = replySubmissionResult.rows[0] ?? null;
+          }
+        }
+      }
+
+      const insertedResult = await client.query<{
+        id: number;
+      }>(
+        `
+          INSERT INTO work_item_comments (
+            work_item_id,
+            submission_id,
+            author_user_id,
+            parent_comment_id,
+            comment_text
+          )
+          VALUES ($1, $2, $3, $4, $5)
+          RETURNING id
+        `,
+        [workItemId, submissionId, user.id, parentCommentId, commentText],
+      );
+      const commentId = insertedResult.rows[0].id;
+
+      const createdResult = await client.query<WorkItemCommentRow>(
+        `
+          SELECT
+            c.id,
+            c.work_item_id,
+            c.submission_id,
+            s.version AS submission_version,
+            c.author_user_id,
+            au.employee_id AS author_employee_id,
+            au.full_name AS author_name,
+            au.role AS author_role,
+            c.parent_comment_id,
+            c.comment_text,
+            c.created_at,
+            c.updated_at
+          FROM work_item_comments c
+          JOIN users au ON au.id = c.author_user_id
+          LEFT JOIN submissions s ON s.id = c.submission_id
+          WHERE c.id = $1
+        `,
+        [commentId],
+      );
+      const comment = createdResult.rows[0];
+      if (!comment) {
+        throw new HttpError(500, "Failed to load created comment.");
+      }
+
+      await writeAuditLog(
+        {
+          actorUserId: user.id,
+          action: "work_item.comment_create",
+          targetType: "work_item_comment",
+          targetId: comment.id,
+          meta: {
+            workItemId,
+            submissionId,
+            parentCommentId,
+          },
+        },
+        client,
+      );
+
+      const recipientCandidates: number[] = [];
+      if (user.role === "ADMIN") {
+        recipientCandidates.push(workItem.owner_user_id);
+      } else {
+        const adminUserIds = await listAdminUserIds(client);
+        recipientCandidates.push(...adminUserIds);
+      }
+      if (parentComment?.author_user_id) {
+        recipientCandidates.push(parentComment.author_user_id);
+      }
+
+      const recipientUserIds = normalizeRecipientIds(recipientCandidates, user.id);
+      const preview =
+        commentText.length > 90 ? `${commentText.slice(0, 90)}...` : commentText;
+      const scopeLabel = submission
+        ? `제출 v${String(submission.version).padStart(3, "0")}`
+        : "업무";
+
+      await createNotifications(
+        recipientUserIds.map((recipientUserId) => ({
+          recipientUserId,
+          actorUserId: user.id,
+          type: "COMMENT_CREATED",
+          title: "새 댓글이 등록되었습니다.",
+          message: `${user.fullName}: ${scopeLabel} - ${preview}`,
+          workItemId,
+          submissionId: submissionId ?? null,
+          meta: {
+            commentId: comment.id,
+            parentCommentId,
+          },
+        })),
+        client,
+      );
+
+      await client.query("COMMIT");
+
+      res.status(201).json({
+        comment: mapCommentRow(comment),
+      });
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }),
+);
+
 workItemsRouter.post(
   "/:workItemId/change-requests",
   asyncHandler(async (req, res) => {
@@ -357,6 +683,24 @@ workItemsRouter.post(
         version: changeRequest.version,
       },
     });
+
+    const adminUserIds = normalizeRecipientIds(await listAdminUserIds(), user.id);
+    await createNotifications(
+      adminUserIds.map((recipientUserId) => ({
+        recipientUserId,
+        actorUserId: user.id,
+        type: "CHANGE_REQUEST_CREATED",
+        title: "새 변경요청이 등록되었습니다.",
+        message: `${workItem.title} / v${String(changeRequest.version).padStart(3, "0")}`,
+        workItemId,
+        changeRequestId: changeRequest.id,
+        meta: {
+          workItemId,
+          changeRequestId: changeRequest.id,
+          requesterUserId: user.id,
+        },
+      })),
+    );
 
     res.status(201).json({
       changeRequest: {

@@ -8,6 +8,7 @@ import { errorHandler, notFound } from "./middleware/error";
 import { applySecurityHeaders } from "./middleware/security";
 import { adminRouter } from "./routes/admin";
 import { authRouter } from "./routes/auth";
+import { notificationsRouter } from "./routes/notifications";
 import { submissionsRouter } from "./routes/submissions";
 import { workItemsRouter } from "./routes/workItems";
 
@@ -50,6 +51,7 @@ async function start(): Promise<void> {
   });
 
   app.use("/api/auth", authRouter);
+  app.use("/api/notifications", notificationsRouter);
   app.use("/api/work-items", workItemsRouter);
   app.use("/api", submissionsRouter);
   app.use("/api/admin", adminRouter);

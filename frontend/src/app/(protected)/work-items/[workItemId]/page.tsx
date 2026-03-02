@@ -17,6 +17,7 @@ import { formatBytes, formatDate, formatDateTime, shortHash } from "@/lib/utils"
 import { useAuth } from "@/hooks/use-auth";
 import { ChangeRequestStatus } from "@/lib/types";
 import { CHANGE_REQUEST_STATUS_LABEL } from "@/lib/status-labels";
+import { WorkItemCommentsPanel } from "@/components/work-items/comments-panel";
 
 function changeRequestStatusClass(status: ChangeRequestStatus): string {
   if (status === "APPROVED") {
@@ -364,6 +365,14 @@ export default function WorkItemDetailPage() {
           </ul>
         )}
       </div>
+
+      <WorkItemCommentsPanel
+        workItemId={workItemId}
+        submissions={submissions.map((submission) => ({
+          id: submission.id,
+          version: submission.version,
+        }))}
+      />
     </section>
   );
 }

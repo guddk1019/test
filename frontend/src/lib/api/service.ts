@@ -3,11 +3,14 @@
 import { AxiosProgressEvent } from "axios";
 import { apiClient } from "./client";
 import {
+  AdminDashboardResponse,
   AdminChangeRequestListResponse,
   AdminReviewRequest,
   AdminReviewResponse,
   AdminWorkItemDetailResponse,
   AdminWorkItemListResponse,
+  CreateWorkItemCommentRequest,
+  CreateWorkItemCommentResponse,
   CreateChangeRequestRequest,
   CreateChangeRequestResponse,
   CreateSubmissionResponse,
@@ -18,11 +21,15 @@ import {
   FinalizeSubmissionResponse,
   LoginRequest,
   LoginResponse,
+  MarkAllNotificationsReadResponse,
+  MarkNotificationReadResponse,
+  NotificationListResponse,
   ReplaceSubmissionFileResponse,
   SubmissionStatusResponse,
   UploadResponse,
   ReviewChangeRequestRequest,
   ReviewChangeRequestResponse,
+  WorkItemCommentsResponse,
   WorkItemDetailResponse,
   WorkItemSummary,
 } from "../types";
@@ -253,6 +260,28 @@ export async function getAdminWorkItems(params?: {
   return response.data;
 }
 
+export async function getAdminDashboard(params?: {
+  fromDate?: string;
+  toDate?: string;
+  department?: string;
+  ownerEmployeeId?: string;
+  submissionStatus?: string;
+}): Promise<AdminDashboardResponse> {
+  const response = await apiClient.get<AdminDashboardResponse>(
+    "/api/admin/dashboard",
+    {
+      params: {
+        fromDate: params?.fromDate || undefined,
+        toDate: params?.toDate || undefined,
+        department: params?.department || undefined,
+        ownerEmployeeId: params?.ownerEmployeeId || undefined,
+        submissionStatus: params?.submissionStatus || undefined,
+      },
+    },
+  );
+  return response.data;
+}
+
 export async function getAdminChangeRequests(params?: {
   status?: string;
   requesterEmployeeId?: string;
@@ -312,6 +341,61 @@ export async function reviewChangeRequest(
 ): Promise<ReviewChangeRequestResponse> {
   const response = await apiClient.post<ReviewChangeRequestResponse>(
     `/api/admin/change-requests/${changeRequestId}/review`,
+    input,
+  );
+  return response.data;
+}
+
+export async function getNotifications(params?: {
+  onlyUnread?: boolean;
+  limit?: number;
+}): Promise<NotificationListResponse> {
+  const response = await apiClient.get<NotificationListResponse>("/api/notifications", {
+    params: {
+      onlyUnread: params?.onlyUnread ? "1" : undefined,
+      limit: params?.limit ?? undefined,
+    },
+  });
+  return response.data;
+}
+
+export async function markNotificationRead(
+  notificationId: number,
+): Promise<MarkNotificationReadResponse> {
+  const response = await apiClient.post<MarkNotificationReadResponse>(
+    `/api/notifications/${notificationId}/read`,
+  );
+  return response.data;
+}
+
+export async function markAllNotificationsRead(): Promise<MarkAllNotificationsReadResponse> {
+  const response = await apiClient.post<MarkAllNotificationsReadResponse>(
+    "/api/notifications/read-all",
+  );
+  return response.data;
+}
+
+export async function getWorkItemComments(
+  workItemId: number,
+  params?: { submissionId?: number },
+): Promise<WorkItemCommentsResponse> {
+  const response = await apiClient.get<WorkItemCommentsResponse>(
+    `/api/work-items/${workItemId}/comments`,
+    {
+      params: {
+        submissionId: params?.submissionId ?? undefined,
+      },
+    },
+  );
+  return response.data;
+}
+
+export async function createWorkItemComment(
+  workItemId: number,
+  input: CreateWorkItemCommentRequest,
+): Promise<CreateWorkItemCommentResponse> {
+  const response = await apiClient.post<CreateWorkItemCommentResponse>(
+    `/api/work-items/${workItemId}/comments`,
     input,
   );
   return response.data;

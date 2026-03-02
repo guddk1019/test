@@ -13,6 +13,11 @@ export const backendRouteMap = [
     "sourceFile": "src/routes/admin.ts"
   },
   {
+    "method": "GET",
+    "path": "/api/admin/dashboard",
+    "sourceFile": "src/routes/admin.ts"
+  },
+  {
     "method": "POST",
     "path": "/api/admin/submissions/:submissionId/review",
     "sourceFile": "src/routes/admin.ts"
@@ -31,6 +36,21 @@ export const backendRouteMap = [
     "method": "POST",
     "path": "/api/auth/login",
     "sourceFile": "src/routes/auth.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/api/notifications/",
+    "sourceFile": "src/routes/notifications.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/api/notifications/:notificationId/read",
+    "sourceFile": "src/routes/notifications.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/api/notifications/read-all",
+    "sourceFile": "src/routes/notifications.ts"
   },
   {
     "method": "POST",
@@ -90,6 +110,16 @@ export const backendRouteMap = [
   {
     "method": "POST",
     "path": "/api/work-items/:workItemId/change-requests",
+    "sourceFile": "src/routes/workItems.ts"
+  },
+  {
+    "method": "GET",
+    "path": "/api/work-items/:workItemId/comments",
+    "sourceFile": "src/routes/workItems.ts"
+  },
+  {
+    "method": "POST",
+    "path": "/api/work-items/:workItemId/comments",
     "sourceFile": "src/routes/workItems.ts"
   },
   {

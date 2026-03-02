@@ -22,6 +22,7 @@ import {
   ReviewChangeRequestRequest,
 } from "@/lib/types";
 import { CHANGE_REQUEST_STATUS_LABEL } from "@/lib/status-labels";
+import { WorkItemCommentsPanel } from "@/components/work-items/comments-panel";
 
 type ReviewFormState = {
   status: AdminReviewRequest["status"];
@@ -480,6 +481,14 @@ export default function AdminWorkItemDetailPage() {
           })
         )}
       </div>
+
+      <WorkItemCommentsPanel
+        workItemId={workItemId}
+        submissions={submissions.map((submission) => ({
+          id: submission.id,
+          version: submission.version,
+        }))}
+      />
 
       {fileActionError ? (
         <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">

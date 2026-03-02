@@ -9,6 +9,11 @@ import { requireAuth } from "../middleware/auth";
 import { HttpError } from "../middleware/error";
 import { writeAuditLog } from "../services/audit";
 import {
+  createNotifications,
+  listAdminUserIds,
+  normalizeRecipientIds,
+} from "../services/notifications";
+import {
   buildNasRelativeDir,
   toAbsoluteNasPath,
   storeUploadedFile,
@@ -20,6 +25,7 @@ import { parseId } from "../utils/validators";
 interface WorkItemOwnerRow {
   id: number;
   owner_user_id: number;
+  title: string;
   owner_employee_id: string;
   owner_department: string;
 }
@@ -34,10 +40,12 @@ interface ChangeRequestLinkRow {
 interface SubmissionOwnerRow {
   submission_id: number;
   work_item_id: number;
+  work_item_title: string;
   version: number;
   status: "UPLOADING" | "SUBMITTED" | "EVALUATING" | "DONE" | "REJECTED";
   created_at: Date | string;
   owner_user_id: number;
+  owner_name: string;
   owner_employee_id: string;
   owner_department: string;
 }
@@ -308,6 +316,7 @@ submissionsRouter.post(
         SELECT
           w.id,
           w.owner_user_id,
+          w.title,
           u.employee_id AS owner_employee_id,
           u.department AS owner_department
         FROM work_items w
@@ -422,10 +431,12 @@ submissionsRouter.post(
         SELECT
           s.id AS submission_id,
           s.work_item_id,
+          w.title AS work_item_title,
           s.version,
           s.status,
           s.created_at,
           w.owner_user_id,
+          u.full_name AS owner_name,
           u.employee_id AS owner_employee_id,
           u.department AS owner_department
         FROM submissions s
@@ -580,17 +591,19 @@ submissionsRouter.post(
       await client.query("BEGIN");
 
       const ownerResult = await client.query<SubmissionOwnerRow>(
-        `
-          SELECT
-            s.id AS submission_id,
-            s.work_item_id,
-            s.version,
-            s.status,
-            s.created_at,
-            w.owner_user_id,
-            u.employee_id AS owner_employee_id,
-            u.department AS owner_department
-          FROM submissions s
+      `
+        SELECT
+          s.id AS submission_id,
+          s.work_item_id,
+          w.title AS work_item_title,
+          s.version,
+          s.status,
+          s.created_at,
+          w.owner_user_id,
+          u.full_name AS owner_name,
+          u.employee_id AS owner_employee_id,
+          u.department AS owner_department
+        FROM submissions s
           JOIN work_items w ON w.id = s.work_item_id
           JOIN users u ON u.id = w.owner_user_id
           WHERE s.id = $1
@@ -680,6 +693,25 @@ submissionsRouter.post(
           targetId: submissionId,
           meta: { workItemId: owner.work_item_id, version: owner.version },
         },
+        client,
+      );
+
+      const adminUserIds = normalizeRecipientIds(await listAdminUserIds(client), user.id);
+      await createNotifications(
+        adminUserIds.map((recipientUserId) => ({
+          recipientUserId,
+          actorUserId: user.id,
+          type: "SUBMISSION_SUBMITTED",
+          title: "새 제출이 접수되었습니다.",
+          message: `${owner.work_item_title} / v${String(owner.version).padStart(3, "0")} (${owner.owner_name})`,
+          workItemId: owner.work_item_id,
+          submissionId,
+          meta: {
+            workItemId: owner.work_item_id,
+            submissionId,
+            version: owner.version,
+          },
+        })),
         client,
       );
 

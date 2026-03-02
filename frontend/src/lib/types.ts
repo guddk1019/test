@@ -283,3 +283,125 @@ export interface ReviewChangeRequestResponse {
   };
   comment: string | null;
 }
+
+export type NotificationType =
+  | "SUBMISSION_SUBMITTED"
+  | "SUBMISSION_REVIEWED"
+  | "CHANGE_REQUEST_CREATED"
+  | "CHANGE_REQUEST_REVIEWED"
+  | "COMMENT_CREATED";
+
+export interface NotificationItem {
+  id: number;
+  recipientUserId: number;
+  actorUserId: number | null;
+  actorEmployeeId: string | null;
+  actorName: string | null;
+  type: NotificationType;
+  title: string;
+  message: string;
+  workItemId: number | null;
+  submissionId: number | null;
+  changeRequestId: number | null;
+  isRead: boolean;
+  readAt: string | null;
+  createdAt: string;
+  meta: Record<string, unknown>;
+  targetPath: string | null;
+}
+
+export interface NotificationListResponse {
+  unreadCount: number;
+  items: NotificationItem[];
+}
+
+export interface MarkNotificationReadResponse {
+  notification: {
+    id: number;
+    isRead: boolean;
+    readAt: string | null;
+  };
+}
+
+export interface MarkAllNotificationsReadResponse {
+  updatedCount: number;
+}
+
+export interface WorkItemComment {
+  id: number;
+  workItemId: number;
+  submissionId: number | null;
+  submissionVersion: number | null;
+  authorUserId: number;
+  authorEmployeeId: string;
+  authorName: string;
+  authorRole: UserRole;
+  parentCommentId: number | null;
+  commentText: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WorkItemCommentsResponse {
+  comments: WorkItemComment[];
+}
+
+export interface CreateWorkItemCommentRequest {
+  commentText: string;
+  submissionId?: number;
+  parentCommentId?: number;
+}
+
+export interface CreateWorkItemCommentResponse {
+  comment: WorkItemComment;
+}
+
+export type DashboardSubmissionStatus =
+  | "UPLOADING"
+  | "SUBMITTED"
+  | "EVALUATING"
+  | "DONE"
+  | "REJECTED";
+
+export interface AdminDashboardSummary {
+  totalSubmissions: number;
+  approvedCount: number;
+  rejectedCount: number;
+  reviewingCount: number;
+  uploadingCount: number;
+  avgProcessingHours: number | null;
+  medianProcessingHours: number | null;
+}
+
+export interface AdminDashboardEmployeePerformance {
+  ownerEmployeeId: string;
+  ownerName: string;
+  ownerDepartment: string;
+  total: number;
+  done: number;
+  rejected: number;
+  avgProcessingHours: number | null;
+}
+
+export interface AdminDashboardSubmissionRow {
+  submissionId: number;
+  submissionVersion: number;
+  submissionStatus: DashboardSubmissionStatus;
+  submittedAt: string | null;
+  updatedAt: string;
+  processingHours: number | null;
+  workItemId: number;
+  workItemTitle: string;
+  ownerUserId: number;
+  ownerEmployeeId: string;
+  ownerName: string;
+  ownerDepartment: string;
+}
+
+export interface AdminDashboardResponse {
+  summary: AdminDashboardSummary;
+  statusDistribution: Record<DashboardSubmissionStatus, number>;
+  processingHours: number[];
+  employeePerformance: AdminDashboardEmployeePerformance[];
+  submissions: AdminDashboardSubmissionRow[];
+}
