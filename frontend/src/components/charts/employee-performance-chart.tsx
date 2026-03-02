@@ -51,9 +51,9 @@ export function EmployeePerformanceChart({
 
   return (
     <div className="space-y-2">
-      <div className="text-sm font-semibold text-slate-800">Top Employee Throughput</div>
+      <div className="text-sm font-semibold text-slate-800">직원별 처리량 상위</div>
       {rows.length === 0 ? (
-        <div className="text-xs text-slate-500">No data</div>
+        <div className="text-xs text-slate-500">데이터 없음</div>
       ) : (
         <div className="h-56">
           <ResponsiveContainer width="100%" height="100%">
@@ -63,14 +63,14 @@ export function EmployeePerformanceChart({
               <YAxis dataKey="ownerShort" type="category" width={104} tick={{ fontSize: 11 }} />
               <Tooltip
                 formatter={(value) => `${value ?? 0}`}
-                labelFormatter={(label) => `Owner: ${label}`}
+                labelFormatter={(label) => `담당자: ${label}`}
               />
               <Legend wrapperStyle={{ fontSize: "11px" }} />
               <Bar
                 dataKey="done"
                 stackId="a"
                 fill="#0891B2"
-                name="Done"
+                name="승인"
                 radius={[0, 4, 4, 0]}
                 onClick={(payload) => {
                   const ownerEmployeeId = getOwnerEmployeeIdFromPayload(payload);
@@ -92,7 +92,7 @@ export function EmployeePerformanceChart({
                 dataKey="pendingOrOther"
                 stackId="a"
                 fill="#CBD5E1"
-                name="Others"
+                name="기타"
                 radius={[0, 4, 4, 0]}
                 onClick={(payload) => {
                   const ownerEmployeeId = getOwnerEmployeeIdFromPayload(payload);

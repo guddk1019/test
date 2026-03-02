@@ -34,9 +34,9 @@ export function StatusDistributionChart({
 
   return (
     <div className="space-y-2">
-      <div className="text-sm font-semibold text-slate-800">Status Distribution</div>
+      <div className="text-sm font-semibold text-slate-800">상태 분포</div>
       {total === 0 ? (
-        <div className="text-xs text-slate-500">No data</div>
+        <div className="text-xs text-slate-500">데이터 없음</div>
       ) : (
         <>
           <div className="h-52">

@@ -72,15 +72,15 @@ export default function SubmitResultPage() {
   return (
     <section className="mx-auto max-w-3xl space-y-5">
       <div className="rounded-xl border border-slate-200 bg-white p-6">
-        <h1 className="text-xl font-bold text-slate-900">Submit Result</h1>
+        <h1 className="text-xl font-bold text-slate-900">결과 제출</h1>
         <p className="mt-2 text-sm text-slate-500">
-          Create submission version, upload files, then finalize.
+          제출 버전을 생성하고 파일 업로드 후 제출을 확정하세요.
         </p>
 
         <form className="mt-5 space-y-4" onSubmit={onSubmit}>
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">
-              Result files
+              결과 파일
             </label>
             <input
               className="block w-full rounded-md border border-slate-300 p-2 text-sm"
@@ -89,20 +89,20 @@ export default function SubmitResultPage() {
               onChange={(event) => setFiles(Array.from(event.target.files ?? []))}
             />
             <p className="mt-1 text-xs text-slate-500">
-              {files.length} file(s) selected
+              {files.length}개 파일 선택됨
             </p>
           </div>
 
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">
-              Linked change request (optional)
+              연결할 변경요청 (선택)
             </label>
             <select
               className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm"
               value={selectedChangeRequestId}
               onChange={(event) => setSelectedChangeRequestId(event.target.value)}
             >
-              <option value="">None</option>
+              <option value="">없음</option>
               {approvedChangeRequests.map((changeRequest) => (
                 <option key={changeRequest.id} value={String(changeRequest.id)}>
                   v{String(changeRequest.version).padStart(3, "0")} - {changeRequest.changeText}
@@ -116,19 +116,19 @@ export default function SubmitResultPage() {
 
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">
-              Note (optional)
+              결과 요약 (선택)
             </label>
             <textarea
               className="min-h-28 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
               value={noteText}
               onChange={(event) => setNoteText(event.target.value)}
-              placeholder="Submission summary"
+              placeholder="제출 내용을 간단히 입력하세요."
             />
           </div>
 
           {mutation.isPending ? (
             <div className="rounded-md bg-cyan-50 p-3 text-sm text-cyan-800">
-              Upload progress: {uploadPercent}%
+              업로드 진행률: {uploadPercent}%
             </div>
           ) : null}
           {mutation.isError ? (
@@ -139,11 +139,11 @@ export default function SubmitResultPage() {
 
           <div className="flex items-center gap-2">
             <Button disabled={!canSubmit || mutation.isPending} type="submit">
-              {mutation.isPending ? "Submitting..." : "Finalize Submission"}
+              {mutation.isPending ? "제출 중..." : "제출 확정"}
             </Button>
             <Link href={`/work-items/${workItemId}`}>
               <Button variant="secondary" type="button">
-                Back to detail
+                상세로 돌아가기
               </Button>
             </Link>
           </div>
@@ -152,9 +152,9 @@ export default function SubmitResultPage() {
 
       {result ? (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
-          <h2 className="font-semibold text-emerald-900">Submission completed</h2>
+          <h2 className="font-semibold text-emerald-900">제출이 완료되었습니다.</h2>
           <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-emerald-900">
-            <span>Submission ID: {result.id}</span>
+            <span>제출 ID: {result.id}</span>
             <StatusBadge status={result.status} />
           </div>
         </div>

@@ -48,6 +48,43 @@ PowerShell execution policy may block `npm`. In that case use `npm.cmd` (for exa
 Health check:
 `GET http://localhost:4000/health`
 
+### Local production mode (no dev overlay)
+PowerShell:
+
+```powershell
+.\start-prod.ps1
+```
+
+Stop:
+
+```powershell
+.\stop-prod.ps1
+```
+
+Notes:
+- This starts backend and frontend in production mode (`npm run start`, `next start`).
+- Logs and PID files are written to `.runtime/`.
+- Optional flags: `-SkipInstall -SkipMigrate -SkipSeed -SkipBuild -BackendPort -FrontendPort -ApiBaseUrl`
+
+Example:
+
+```powershell
+.\start-prod.ps1 -BackendPort 4100 -FrontendPort 3100 -ApiBaseUrl http://127.0.0.1:4100
+```
+
+### Migration checksum repair (dev)
+If migration fails with `Checksum mismatch`, repair the checksum row:
+
+```powershell
+.\repair-migration-checksum.ps1 -MigrationFile 003_v020_foundation.sql
+```
+
+If the row does not exist:
+
+```powershell
+.\repair-migration-checksum.ps1 -MigrationFile 003_v020_foundation.sql -InsertIfMissing
+```
+
 ## 6) Seed accounts
 Defaults from `.env`:
 - Admin: `admin001 / Admin1234!`
@@ -66,8 +103,17 @@ Defaults from `.env`:
 - `POST /api/work-items/:workItemId/change-requests`
 - `POST /api/work-items/:workItemId/submissions`
 - `POST /api/submissions/:submissionId/files` (multipart field: `files`)
+- `GET /api/submissions/:submissionId/files/:fileArtifactId/download`
+- `PUT /api/submissions/:submissionId/files/:fileArtifactId` (multipart field: `file`, UPLOADING/SUBMITTED only)
+- `DELETE /api/submissions/:submissionId/files/:fileArtifactId` (UPLOADING/SUBMITTED only)
+- `GET /api/submissions/:submissionId/files/:fileArtifactId/revisions` (변경 이력 조회)
+- `GET /api/submissions/:submissionId/files/:fileArtifactId/revisions/:revisionId/download` (이전 버전 다운로드)
 - `POST /api/submissions/:submissionId/finalize`
 - `GET /api/submissions/:submissionId/status`
+
+운영 정책:
+- `SUBMITTED` 이후 파일은 수정/삭제 가능
+- 수정 시 이전 파일은 `file_artifact_revisions`에 보존되고 감사 로그가 남음
 
 ### Admin APIs
 - `GET /api/admin/work-items`
@@ -79,6 +125,7 @@ Defaults from `.env`:
 ### Migration note
 - New migration added: `sql/002_change_requests.sql`
 - v0.2 draft migration: `sql/003_v020_foundation.sql`
+- File history migration: `sql/004_file_artifact_revisions.sql`
 - Run: `npm run db:migrate`
 
 ## 8) Status model

@@ -8,6 +8,7 @@ import { WorkItemStatus } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatDate, formatDateTime, formatHours } from "@/lib/utils";
+import { CHANGE_REQUEST_STATUS_LABEL, WORK_ITEM_STATUS_LABEL } from "@/lib/status-labels";
 import { StatusDistributionChart } from "@/components/charts/status-distribution-chart";
 import { EmployeePerformanceChart } from "@/components/charts/employee-performance-chart";
 import {
@@ -18,21 +19,21 @@ import {
 } from "@/components/charts/processing-time-bucket-chart";
 
 const STATUS_OPTIONS: Array<{ value: "" | WorkItemStatus; label: string }> = [
-  { value: "", label: "All" },
-  { value: "SUBMITTED", label: "Submitted" },
-  { value: "EVALUATING", label: "Evaluating" },
-  { value: "DONE", label: "Done" },
-  { value: "REJECTED", label: "Rejected" },
-  { value: "DRAFT", label: "Draft" },
+  { value: "", label: "전체" },
+  { value: "SUBMITTED", label: WORK_ITEM_STATUS_LABEL.SUBMITTED },
+  { value: "EVALUATING", label: WORK_ITEM_STATUS_LABEL.EVALUATING },
+  { value: "DONE", label: WORK_ITEM_STATUS_LABEL.DONE },
+  { value: "REJECTED", label: WORK_ITEM_STATUS_LABEL.REJECTED },
+  { value: "DRAFT", label: WORK_ITEM_STATUS_LABEL.DRAFT },
 ];
 
 type RangeFilter = "7d" | "30d" | "90d" | "all";
 
 const RANGE_OPTIONS: Array<{ value: RangeFilter; label: string }> = [
-  { value: "7d", label: "Last 7 days" },
-  { value: "30d", label: "Last 30 days" },
-  { value: "90d", label: "Last 90 days" },
-  { value: "all", label: "All time" },
+  { value: "7d", label: "최근 7일" },
+  { value: "30d", label: "최근 30일" },
+  { value: "90d", label: "최근 90일" },
+  { value: "all", label: "전체 기간" },
 ];
 
 const EMPTY_STATUS_COUNTS: Record<WorkItemStatus, number> = {
@@ -279,27 +280,27 @@ export default function AdminQueuePage() {
   return (
     <section className="space-y-5">
       <div className="rounded-xl border border-slate-200 bg-white p-5">
-        <h1 className="text-xl font-bold text-slate-900">Admin Submission Queue</h1>
+        <h1 className="text-xl font-bold text-slate-900">관리자 제출 큐</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Interactive KPIs and drill-down filters by chart click.
+          KPI와 필터를 통해 제출 현황을 빠르게 관리할 수 있습니다.
         </p>
       </div>
 
       <div className="grid gap-3 md:grid-cols-4">
         <div className="rounded-xl border border-slate-200 bg-white p-4">
-          <div className="text-xs text-slate-500">Approved</div>
+          <div className="text-xs text-slate-500">승인</div>
           <div className="mt-2 text-2xl font-bold text-emerald-700">{counts.approved}</div>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-4">
-          <div className="text-xs text-slate-500">Pending</div>
+          <div className="text-xs text-slate-500">대기</div>
           <div className="mt-2 text-2xl font-bold text-blue-700">{counts.pending}</div>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-4">
-          <div className="text-xs text-slate-500">Rejected</div>
+          <div className="text-xs text-slate-500">반려</div>
           <div className="mt-2 text-2xl font-bold text-rose-700">{counts.rejected}</div>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-4">
-          <div className="text-xs text-slate-500">Avg. Processing Time</div>
+          <div className="text-xs text-slate-500">평균 처리 시간</div>
           <div className="mt-2 text-2xl font-bold text-slate-900">
             {formatHours(metricsQuery.data?.averageProcessingHours ?? null)}
           </div>
@@ -308,31 +309,31 @@ export default function AdminQueuePage() {
 
       <div className="grid gap-3 md:grid-cols-5">
         <div className="rounded-xl border border-slate-200 bg-white p-4">
-          <div className="text-xs text-slate-500">Change Requests</div>
+          <div className="text-xs text-slate-500">변경요청</div>
           <div className="mt-2 text-2xl font-bold text-slate-900">
             {metricsQuery.data?.changeRequestCounts.total ?? 0}
           </div>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-4">
-          <div className="text-xs text-slate-500">Requested</div>
+          <div className="text-xs text-slate-500">{CHANGE_REQUEST_STATUS_LABEL.REQUESTED}</div>
           <div className="mt-2 text-2xl font-bold text-amber-700">
             {metricsQuery.data?.changeRequestCounts.requested ?? 0}
           </div>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-4">
-          <div className="text-xs text-slate-500">Approved</div>
+          <div className="text-xs text-slate-500">{CHANGE_REQUEST_STATUS_LABEL.APPROVED}</div>
           <div className="mt-2 text-2xl font-bold text-emerald-700">
             {metricsQuery.data?.changeRequestCounts.approved ?? 0}
           </div>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-4">
-          <div className="text-xs text-slate-500">Rejected</div>
+          <div className="text-xs text-slate-500">{CHANGE_REQUEST_STATUS_LABEL.REJECTED}</div>
           <div className="mt-2 text-2xl font-bold text-rose-700">
             {metricsQuery.data?.changeRequestCounts.rejected ?? 0}
           </div>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-4">
-          <div className="text-xs text-slate-500">Approval Rate / Avg Review</div>
+          <div className="text-xs text-slate-500">승인율 / 평균 검토 시간</div>
           <div className="mt-2 text-xl font-bold text-slate-900">
             {formatPercent(metricsQuery.data?.changeRequestApprovalRate ?? null)}
           </div>
@@ -371,20 +372,20 @@ export default function AdminQueuePage() {
               className="h-10 rounded-md border border-slate-300 px-3 text-sm"
               value={department}
               onChange={(event) => setDepartment(event.target.value)}
-              placeholder="Department"
+              placeholder="부서"
             />
             <input
               className="h-10 rounded-md border border-slate-300 px-3 text-sm"
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="Search title/plan text"
+              placeholder="업무명/계획 검색"
             />
             <Button
               variant="secondary"
               onClick={() => setKeyword(searchInput.trim())}
               type="button"
             >
-              Search
+              검색
             </Button>
           </div>
 
@@ -396,7 +397,7 @@ export default function AdminQueuePage() {
                   onClick={() => setStatus("")}
                   type="button"
                 >
-                  Status: {status} x
+                  상태: {WORK_ITEM_STATUS_LABEL[status]} x
                 </button>
               ) : null}
               {ownerEmployeeIdFilter ? (
@@ -405,7 +406,7 @@ export default function AdminQueuePage() {
                   onClick={() => setOwnerEmployeeIdFilter("")}
                   type="button"
                 >
-                  Owner: {selectedOwnerLabel} x
+                  담당자: {selectedOwnerLabel} x
                 </button>
               ) : null}
               {processingBucketFilter ? (
@@ -414,7 +415,7 @@ export default function AdminQueuePage() {
                   onClick={() => setProcessingBucketFilter("")}
                   type="button"
                 >
-                  Processing: {PROCESSING_BUCKET_LABELS[processingBucketFilter]} x
+                  처리시간: {PROCESSING_BUCKET_LABELS[processingBucketFilter]} x
                 </button>
               ) : null}
             </div>
@@ -422,7 +423,7 @@ export default function AdminQueuePage() {
 
           <div className="overflow-x-auto">
             {listQuery.isLoading ? (
-              <div className="py-6 text-sm text-slate-500">Loading queue...</div>
+              <div className="py-6 text-sm text-slate-500">제출 큐를 불러오는 중...</div>
             ) : listQuery.isError ? (
               <div className="py-6 text-sm font-medium text-rose-700">
                 {listQuery.error.message}
@@ -431,11 +432,11 @@ export default function AdminQueuePage() {
               <table className="min-w-full divide-y divide-slate-200 text-sm">
                 <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                   <tr>
-                    <th className="px-4 py-3">Work Item</th>
-                    <th className="px-4 py-3">Owner</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">Due Date</th>
-                    <th className="px-4 py-3">Updated</th>
+                    <th className="px-4 py-3">업무명</th>
+                    <th className="px-4 py-3">담당자</th>
+                    <th className="px-4 py-3">상태</th>
+                    <th className="px-4 py-3">기한</th>
+                    <th className="px-4 py-3">업데이트</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -465,7 +466,7 @@ export default function AdminQueuePage() {
             )}
           </div>
           {!listQuery.isLoading && filteredItems.length === 0 ? (
-            <div className="text-sm text-slate-500">No items in selected filter set.</div>
+            <div className="text-sm text-slate-500">선택한 조건에 맞는 업무가 없습니다.</div>
           ) : null}
         </div>
 

@@ -13,10 +13,12 @@ import {
   CreateSubmissionResponse,
   CreateWorkItemRequest,
   CreateWorkItemResponse,
+  DeleteSubmissionFileResponse,
   FinalizeSubmissionRequest,
   FinalizeSubmissionResponse,
   LoginRequest,
   LoginResponse,
+  ReplaceSubmissionFileResponse,
   SubmissionStatusResponse,
   UploadResponse,
   ReviewChangeRequestRequest,
@@ -121,6 +123,92 @@ export async function uploadSubmissionFiles(
         onProgress(Math.round((event.loaded / event.total) * 100));
       },
     },
+  );
+  return response.data;
+}
+
+function extractDownloadFilename(
+  contentDisposition: string | undefined,
+  fallback: string,
+): string {
+  if (!contentDisposition) {
+    return fallback;
+  }
+
+  const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match?.[1]) {
+    try {
+      return decodeURIComponent(utf8Match[1]);
+    } catch {
+      return utf8Match[1];
+    }
+  }
+
+  const quotedMatch = contentDisposition.match(/filename="([^"]+)"/i);
+  if (quotedMatch?.[1]) {
+    return quotedMatch[1];
+  }
+
+  const plainMatch = contentDisposition.match(/filename=([^;]+)/i);
+  if (plainMatch?.[1]) {
+    return plainMatch[1].trim();
+  }
+
+  return fallback;
+}
+
+export async function downloadSubmissionFile(
+  submissionId: number,
+  fileArtifactId: number,
+  fallbackName: string,
+): Promise<void> {
+  const response = await apiClient.get<Blob>(
+    `/api/submissions/${submissionId}/files/${fileArtifactId}/download`,
+    {
+      responseType: "blob",
+    },
+  );
+
+  const fileName = extractDownloadFilename(
+    response.headers["content-disposition"],
+    fallbackName,
+  );
+  const blobUrl = window.URL.createObjectURL(response.data);
+  const anchor = document.createElement("a");
+  anchor.href = blobUrl;
+  anchor.download = fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.URL.revokeObjectURL(blobUrl);
+}
+
+export async function replaceSubmissionFile(
+  submissionId: number,
+  fileArtifactId: number,
+  file: File,
+): Promise<ReplaceSubmissionFileResponse> {
+  const body = new FormData();
+  body.append("file", file);
+
+  const response = await apiClient.put<ReplaceSubmissionFileResponse>(
+    `/api/submissions/${submissionId}/files/${fileArtifactId}`,
+    body,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    },
+  );
+  return response.data;
+}
+
+export async function deleteSubmissionFile(
+  submissionId: number,
+  fileArtifactId: number,
+): Promise<DeleteSubmissionFileResponse> {
+  const response = await apiClient.delete<DeleteSubmissionFileResponse>(
+    `/api/submissions/${submissionId}/files/${fileArtifactId}`,
   );
   return response.data;
 }
